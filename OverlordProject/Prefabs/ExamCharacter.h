@@ -63,6 +63,8 @@ public:
 
 	void DrawImGui();
 
+	void DamagePlayer(bool canDamage, float damage);
+
 protected:
 	void Initialize(const SceneContext&) override;
 	void Update(const SceneContext&) override;
@@ -86,7 +88,8 @@ private:
 
 	XMFLOAT3 m_TotalVelocity{};						//TotalVelocity with X/Z for Horizontal Movement AND Y for Vertical Movement (fall/jump)
 	XMFLOAT3 m_CurrentDirection{};					//Current/Last Direction based on Camera forward/right (Stored for deacceleration)
-	bool WasPressed{ false };
-
+	bool WasPressed{ false }, CanDamage{ true };
+	float m_Health{ 3000 };
+	float DamageToTake{ 0 }, DamageTimer{ 1 };
 };
 

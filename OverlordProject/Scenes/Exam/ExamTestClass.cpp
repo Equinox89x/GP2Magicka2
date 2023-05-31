@@ -5,10 +5,6 @@
 #include <unordered_set>
 
 #pragma region Setup
-ExamTestClass::ExamTestClass() : GameScene(L"ExamTestClass")
-{
-}
-
 void ExamTestClass::Initialize()
 {
 
@@ -16,17 +12,18 @@ void ExamTestClass::Initialize()
 	//m_SceneContext.settings.drawPhysXDebug = true;
 	m_SceneContext.settings.drawGrid = true;
 	m_SceneContext.settings.enableOnGUI = true;
-
-	CreateMagic();
-	m_ComboBar.reserve(5);
-	
 	m_pMaterial = MaterialManager::Get()->CreateMaterial<DiffuseMaterial>();
 	m_Material = PxGetPhysics().createMaterial(.5f, .5f, .5f);
 	m_pMaterial->SetDiffuseTexture(L"Textures/Chair_Dark.dds");
 
+	CreateMagic();
+	m_ComboBar.reserve(5);
+	
 	CreateLevel();
 
 	CreateCharacter();
+
+	CreateDamager();
 
 	CreateEnemies();
 
@@ -34,24 +31,7 @@ void ExamTestClass::Initialize()
 
 	CreateEmitters();
 
-	auto pos{ m_pCharacter->GetTransform()->GetPosition() };
-	auto pos1{ XMFLOAT3{pos.x - 50, pos.y + 10, pos.z - 450} };
-	auto pos2{ XMFLOAT3{ pos.x + 100, pos.y + 10, pos.z + 250 } };
-	auto pos3{ XMFLOAT3{ pos2.x + 50, pos.y + 10, pos2.z + 50 } };
-	auto pos4{ XMFLOAT3{ pos3.x + 620, pos.y + 10, pos3.z + 100 } };
-	auto pos5{ XMFLOAT3{ pos4.x+300, pos.y + 10, pos4.z+550 } };
-	auto pos6{ XMFLOAT3{ pos5.x-100, pos.y + 10, pos5.z+550 } };
-
-	Line line1{ {pos1, pos2} };
-	Line line2{ {pos2, pos3} };
-	Line line3{ {pos3, pos4} };
-	Line line4{ {pos4, pos5} };
-	Line line5{ {pos5, pos6} };
-	std::vector<Line> lines{ line1, line2, line3, line4, line5 };
-
-	Sphere = AddChild(new SpherePrefab{ 10,20, XMFLOAT4{1,0,0,1} });
-	Sphere->GetTransform()->Translate(pos);
-	m_pCamera->InitPoints(lines);
+	DefineCameraSpline();
 
 	SetStartPos();
 
@@ -111,10 +91,6 @@ void ExamTestClass::CreateLevel()
 	m_pLevel->GetComponent<RigidBodyComponent>()->SetKinematic(true);
 	const auto pPxTriangleMesh = ContentManager::Load<PxTriangleMesh>(L"Meshes/level.ovpt");
 	m_pLevel->GetComponent<RigidBodyComponent>()->AddCollider(PxTriangleMeshGeometry(pPxTriangleMesh, PxMeshScale({ 1.f,1.f,1.f })), *m_pDefaultMaterial);
-	//const PxTriangleMesh* mesh{ ContentManager::Load<PxTriangleMesh>(L"Meshes/level.ovpc") };
-	//m_pLevel->GetComponent<RigidBodyComponent>()->AddCollider(mesh, *m_pDefaultMaterial);
-
-
 }
 
 void ExamTestClass::CreateInput()
@@ -162,18 +138,11 @@ void ExamTestClass::CreateCharacter()
 	characterDesc.actionId_Move = Move;
 	characterDesc.actionId_Execute = Execute;
 
-	characterDesc.maxMoveSpeed = 55;
+	characterDesc.maxMoveSpeed = 35;
 
 	m_pCharacter = AddChild(new ExamCharacter(characterDesc));
 	m_pCharacter->GetTransform()->Translate(-50.f, 5.f, 100.f);
 	m_pCharacter->AddComponent(new ModelComponent(L"Meshes/wizard.ovm"));
-	
-	//auto go{ new GameObject() };
-	//m_pCharacter->AddChild(go);
-	//go->AddComponent(new RigidBodyComponent());
-	//go->GetComponent<RigidBodyComponent>()->SetKinematic(true);
-	//go->GetComponent<RigidBodyComponent>()->AddCollider(PxTriangleMeshGeometry(pPxTriangleMesh, PxMeshScale({ 0.5f,0.5f,.5f })), *m_pDefaultMaterial);
-
 	m_pCharacter->GetComponent<ModelComponent>()->SetMaterial(m_pMaterial);
 	m_pCharacter->GetTransform()->Scale(0.5f);
 
@@ -187,27 +156,73 @@ void ExamTestClass::CreateCharacter()
 	m_SceneContext.pCamera->GetTransform()->Rotate(-45, -90, 0);
 }
 
+void ExamTestClass::CreateDamager() {
+	m_pDamageCollider = new GameObject();
+	AddChild(m_pDamageCollider);
+	m_pDamageCollider->AddComponent(new RigidBodyComponent());
+	m_pDamageCollider->GetComponent<RigidBodyComponent>()->AddCollider(PxBoxGeometry{ 30,30,30 }, *m_pDefaultMaterial);
+	m_pDamageCollider->GetComponent<RigidBodyComponent>()->SetKinematic(true);
+
+	auto colliderInfo = m_pDamageCollider->GetComponent<RigidBodyComponent>()->GetCollider(0);
+	colliderInfo.SetTrigger(true);
+
+	m_pDamageCollider->SetOnTriggerCallBack([&](GameObject* /*pTriggerObject*/, GameObject* pOtherObject, PxTriggerAction action)
+		{
+			if (action == PxTriggerAction::ENTER)
+			{
+				if (auto hittingEnemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
+					m_pCharacter->DamagePlayer(true, hittingEnemy->GetAttackDamage());
+				}
+
+			}
+	if (action == PxTriggerAction::LEAVE)
+	{
+		if (auto hittingEnemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
+			m_pCharacter->DamagePlayer(false, hittingEnemy->GetAttackDamage());
+		}
+
+	}
+		});
+}
+
 void ExamTestClass::CreateEnemies() {
-	const auto pPxTriangleMesh = ContentManager::Load<PxTriangleMesh>(L"Meshes/wizard.ovpt");
 	CharacterDescExtended enemyDesc{ m_Material };
-	enemyDesc.maxMoveSpeed = 15;
+	enemyDesc.maxMoveSpeed = 55;
 
 	float width{ 50 };
 	for (size_t i = 0; i < 5; i++)
 	{
-		auto enemy = AddChild(new EnemyMeleeCharacter(enemyDesc));
+		EnemyMeleeCharacter* enemy = new EnemyMeleeCharacter(enemyDesc, XMFLOAT3{ width, 5.f, -100 });
+		AddChild(enemy);
 		enemy->AddComponent(new ModelComponent(L"Meshes/wizard.ovm"));
 		enemy->GetComponent<ModelComponent>()->SetMaterial(m_pMaterial);
 
 		enemy->AddComponent(new RigidBodyComponent());
 		enemy->GetComponent<RigidBodyComponent>()->SetKinematic(true);
-		enemy->GetComponent<RigidBodyComponent>()->AddCollider(PxTriangleMeshGeometry(pPxTriangleMesh, PxMeshScale({ 0.5f,0.5f,.5f })), *m_pDefaultMaterial);
+		enemy->GetComponent<RigidBodyComponent>()->AddCollider(PxBoxGeometry{10,50,10}, *m_pDefaultMaterial);
+		enemy->GetComponent<RigidBodyComponent>()->AddCollider(PxBoxGeometry{10,50,10}, *m_pDefaultMaterial);
 		
+		auto colliderInfo = enemy->GetComponent<RigidBodyComponent>()->GetCollider(0);
+		colliderInfo.SetTrigger(true);
+
+		enemy->SetOnTriggerCallBack([&](GameObject* /*pTriggerObject*/, GameObject* pOtherObject, PxTriggerAction action)
+		{
+			if (action == PxTriggerAction::ENTER)
+			{
+				if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
+					enemy->SetCanMove(false);
+				}				
+			}
+			if (action == PxTriggerAction::LEAVE)
+			{
+				if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
+					enemy->SetCanMove(true);
+				}
+			}
+		});
+
 		enemy->m_pCharacter = m_pCharacter;
-
-		enemy->GetTransform()->Translate(width, 5.f, -100);
 		enemy->GetTransform()->Scale(0.5f);
-
 		m_pMeleeEnemies.push_back(enemy);
 		width -= 30;
 	}
@@ -376,8 +391,6 @@ void ExamTestClass::CreateEmitters()
 	component = new ParticleEmitterComponent(L"Textures/Smoke.png", settings, 200);
 	m_pSprayMagicEmitter->AddComponent(component);
 
-	auto material = PxGetPhysics().createMaterial(.5f, .5f, .1f);
-
 	//beam
 	m_pBeamMagicEmitterContainer = m_pCharacter->AddChild(new GameObject());
 	m_pBeamMagicEmitter = new CubePrefab(10, 10, 600);
@@ -385,7 +398,7 @@ void ExamTestClass::CreateEmitters()
 	m_pBeamMagicEmitter->GetTransform()->Translate(0,0,320);
 	m_pBeamMagicEmitter->AddComponent(new RigidBodyComponent());
 	m_pBeamMagicEmitter->GetComponent<RigidBodyComponent>()->SetKinematic(true);
-	m_pBeamMagicEmitter->GetComponent<RigidBodyComponent>()->AddCollider(PxBoxGeometry{ 2.5f, 2.5f, 150 }, *material);
+	m_pBeamMagicEmitter->GetComponent<RigidBodyComponent>()->AddCollider(PxBoxGeometry{ 2.5f, 2.5f, 150 }, *m_pDefaultMaterial);
 	auto colliderInfo = m_pBeamMagicEmitter->GetComponent<RigidBodyComponent>()->GetCollider(0);
 	colliderInfo.SetTrigger(true);
 
@@ -413,7 +426,7 @@ void ExamTestClass::CreateEmitters()
 	m_pAOEMagicEmitter->GetTransform()->Rotate(90, 0, 0);
 
 	m_pAOEMagicEmitter->AddComponent(new RigidBodyComponent());
-	m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->AddCollider(PxBoxGeometry{ 70,70,70 }, *material);
+	m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->AddCollider(PxBoxGeometry{ 70,70,70 }, *m_pDefaultMaterial);
 	m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->SetKinematic(true);
 
 	colliderInfo = m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->GetCollider(0);
@@ -528,6 +541,27 @@ void ExamTestClass::CreateUI()
 		width2 += 35;
 	}
 }
+
+void ExamTestClass::DefineCameraSpline() {
+	auto pos{ m_pCharacter->GetTransform()->GetPosition() };
+	auto pos1{ XMFLOAT3{pos.x + 20, pos.y + 10, pos.z - 550} };
+	auto pos2{ XMFLOAT3{ pos.x + 100, pos.y + 10, pos.z + 150 } };
+	auto pos3{ XMFLOAT3{ pos2.x + 50, pos.y + 10, pos2.z + 50 } };
+	auto pos4{ XMFLOAT3{ pos3.x + 620, pos.y + 10, pos3.z + 100 } };
+	auto pos5{ XMFLOAT3{ pos4.x + 300, pos.y + 10, pos4.z + 550 } };
+	auto pos6{ XMFLOAT3{ pos5.x - 100, pos.y + 10, pos5.z + 550 } };
+
+	Line line1{ {pos1, pos2} };
+	Line line2{ {pos2, pos3} };
+	Line line3{ {pos3, pos4} };
+	Line line4{ {pos4, pos5} };
+	Line line5{ {pos5, pos6} };
+	std::vector<Line> lines{ line1, line2, line3, line4, line5 };
+
+	Sphere = AddChild(new SpherePrefab{ 10,20, XMFLOAT4{1,0,0,1} });
+	Sphere->GetTransform()->Translate(pos);
+	m_pCamera->InitPoints(lines);
+}
 #pragma endregion
 
 void ExamTestClass::OnGUI()
@@ -568,8 +602,9 @@ void ExamTestClass::HandleEmitterMovement(const XMFLOAT3 pos) {
 	XMFLOAT3 pos2{ m_pCharacter->GetTransform()->GetForward() };
 	pos2.x *= 400 + pos.x;
 	pos2.z *= 400 + pos.z;
-	m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->UpdatePosition(pos, m_pAOEMagicEmitter->GetTransform()->GetRotation());
+	m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->UpdatePosition(pos, m_pCharacter->GetTransform()->GetRotation());
 	m_pBeamMagicEmitter->GetTransform()->Rotate(XMFLOAT3{ 0,0,0 });
+	m_pDamageCollider->GetComponent<RigidBodyComponent>()->UpdatePosition(pos, m_pCharacter->GetTransform()->GetRotation());
 }
 
 void ExamTestClass::HandleUIMovement(const XMFLOAT3 pos) {

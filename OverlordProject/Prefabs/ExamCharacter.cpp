@@ -19,7 +19,7 @@ void ExamCharacter::Initialize(const SceneContext& /*sceneContext*/)
 
 void ExamCharacter::Update(const SceneContext& sceneContext)
 {
-	//float deltaTime = sceneContext.pGameTime->GetElapsed();
+	float deltaTime = sceneContext.pGameTime->GetElapsed();
 
 	//## Input Gathering (move, look, rotation)
 	XMFLOAT2 look{ 0.f, 0.f };
@@ -36,6 +36,14 @@ void ExamCharacter::Update(const SceneContext& sceneContext)
 
 	HandleMove(sceneContext, newRot, epsilon);
 
+	if (CanDamage) {
+		DamageTimer -= deltaTime;
+		if (DamageTimer <= 0) {
+			m_Health -= DamageToTake;
+			std::cout << "Damage Taken: " << DamageToTake << ", Remaining Health: " << m_Health << "\n";
+			DamageTimer = 1;
+		}
+	}
 }
 
 float MapRange(float value, float inputMin, float inputMax, float outputMin, float outputMax) {
@@ -222,5 +230,17 @@ void ExamCharacter::DrawImGui()
 		{
 			m_pCameraComponent->SetActive(isActive);
 		}*/
+	}
+}
+
+void ExamCharacter::DamagePlayer(bool canDamage, float damage)
+{
+	CanDamage = canDamage;
+	if (CanDamage) {
+		DamageToTake += damage;
+	}
+	else {
+		DamageToTake -= damage;
+		if (DamageToTake <= 0) DamageToTake = 0;
 	}
 }

@@ -5,7 +5,7 @@ struct ResultingMagic;
 class EnemyMeleeCharacter : public GameObject
 {
 public:
-	EnemyMeleeCharacter(const CharacterDescExtended& characterDesc);
+	EnemyMeleeCharacter(const CharacterDescExtended& characterDesc, XMFLOAT3 postitionOffset);
 	~EnemyMeleeCharacter() override = default;
 
 	EnemyMeleeCharacter(const EnemyMeleeCharacter& other) = delete;
@@ -20,6 +20,8 @@ public:
 
 	float GetHealth() { return m_Health; };
 	void SetCanDamage(bool canDamage) { CanDamageAoE = canDamage; };
+	void SetCanMove(bool canMove) { CanMove = canMove; };
+	float GetAttackDamage() { return m_AttackDamage; };
 
 	ExamCharacter* m_pCharacter{ nullptr };
 
@@ -34,8 +36,9 @@ private:
 	float m_Health{ 1500 };
 
 	float DamageTimer, DefaultDamageTimer{ 0.5f };
-	bool CanDamage{ false };
-	bool CanDamageAoE{ false };
-	float DamageToTake;
+	bool CanDamage{ false }, CanMove{ true }, CanDamageAoE{ false };
+	float DamageToTake, m_AttackDamage{ 100 };
+
+	XMFLOAT3 PostitionOffset;
 };
 

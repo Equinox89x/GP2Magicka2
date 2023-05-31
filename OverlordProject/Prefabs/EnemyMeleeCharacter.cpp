@@ -3,8 +3,9 @@
 #include "../OverlordEngine/Prefabs/MagickaCamera.h"
 #include <Scenes/Exam/ExamTestClass.h>
 
-EnemyMeleeCharacter::EnemyMeleeCharacter(const CharacterDescExtended& characterDesc):
-	m_CharacterDescExtended{ characterDesc }
+EnemyMeleeCharacter::EnemyMeleeCharacter(const CharacterDescExtended& characterDesc, XMFLOAT3 postitionOffset):
+	m_CharacterDescExtended{ characterDesc },
+	PostitionOffset{ postitionOffset }
 {
 }
 
@@ -13,6 +14,7 @@ void EnemyMeleeCharacter::Initialize(const SceneContext& /*sceneContext*/)
 	//auto go{ new GameObject() };
 	//AddChild(go);
 	//m_pControllerComponent = AddComponent(new ControllerComponent(m_CharacterDescExtended.controller));
+	GetTransform()->Translate(PostitionOffset);
 }
 
 void EnemyMeleeCharacter::Update(const SceneContext& sceneContext)
@@ -31,8 +33,8 @@ void EnemyMeleeCharacter::Update(const SceneContext& sceneContext)
 		}
 	}
 
-	auto originalRotation{ GetComponent<ModelComponent>()->GetTransform()->GetWorldRotation() };
-	auto originalLocation{ GetComponent<ModelComponent>()->GetTransform()->GetWorldPosition() };
+	auto originalRotation{ GetTransform()->GetWorldRotation() };
+	auto originalLocation{ GetTransform()->GetWorldPosition() };
 
 	auto lookPosition{ m_pCharacter->GetTransform()->GetWorldPosition() };
 	XMVECTOR direction = XMVectorSubtract(XMLoadFloat3(&lookPosition), XMLoadFloat3(&originalLocation));
@@ -40,13 +42,15 @@ void EnemyMeleeCharacter::Update(const SceneContext& sceneContext)
 	XMFLOAT3 newRot = XMFLOAT3{ originalRotation.x, yaw, originalRotation.z };
 	GetComponent<ModelComponent>()->GetTransform()->Rotate(newRot, false);
 
-	//get forward vector
-	XMFLOAT3 forward{ GetTransform()->GetForward() };
-	originalLocation.x += forward.x * (deltaTime * m_CharacterDescExtended.maxMoveSpeed);
-	originalLocation.z += forward.z * (deltaTime * m_CharacterDescExtended.maxMoveSpeed);
+	if (CanMove) {
+		//get forward vector
+		XMFLOAT3 forward{ GetTransform()->GetForward() };
+		originalLocation.x += forward.x * (deltaTime * m_CharacterDescExtended.maxMoveSpeed);
+		originalLocation.z += forward.z * (deltaTime * m_CharacterDescExtended.maxMoveSpeed);
 
-	if (!MathHelper::IsPointInCircle3D(originalLocation, lookPosition, 25)) {
-		GetComponent<ModelComponent>()->GetTransform()->Translate(originalLocation);
+		if (!MathHelper::IsPointInCircle3D(originalLocation, lookPosition, 25)) {
+			GetTransform()->Translate(originalLocation);
+		}
 	}
 }
 

@@ -200,7 +200,7 @@ struct Magic {
 class ExamTestClass : public GameScene
 {
 public:
-	ExamTestClass();
+	ExamTestClass() : GameScene(L"ExamTestClass") {};
 	~ExamTestClass() override = default;
 	ExamTestClass(const ExamTestClass& other) = delete;
 	ExamTestClass(ExamTestClass&& other) noexcept = delete;
@@ -246,6 +246,7 @@ private:
 	GameObject* m_pUI{ nullptr };
 	GameObject* m_pUI2{ nullptr };
 	GameObject* m_pUI3{ nullptr };
+	GameObject* m_pDamageCollider{ nullptr };
 	DiffuseMaterial* m_pMaterial{};
 	DiffuseMaterial* m_pLevelMaterial{};
 	std::vector<std::wstring> m_Textures{};
@@ -301,7 +302,9 @@ private:
 	void CreateMagic();
 	void CreateEmitters();
 	void CreateUI();
+	void CreateDamager();
 	void CreateEnemies();
+	void DefineCameraSpline();
 
 	//magic helper functions
 	Magic* GetCombinedMagicType(ElementTypes elementType1, ElementTypes elementType2);
