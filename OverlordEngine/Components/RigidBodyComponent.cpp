@@ -38,10 +38,20 @@ void RigidBodyComponent::Initialize(const SceneContext&)
 
 void RigidBodyComponent::Update(const SceneContext& /*sceneContext*/)
 {
-	//XMFLOAT3 pos{ GetGameObject()->GetTransform()->GetWorldPosition() };
-	//PxTransform trans{ pos.x, pos.y, pos.z };
-	////m_pActor->setGlobalPose(trans);
+	XMFLOAT3 pos{ GetGameObject()->GetTransform()->GetWorldPosition() };
+	XMFLOAT4 rot{ GetGameObject()->GetTransform()->GetWorldRotation() };
+	PxTransform trans{ pos.x, pos.y, pos.z, PxQuat{rot.x, rot.y, rot.z, rot.w} };
+	m_pActor->setGlobalPose(trans);
 	//m_pActor->is<PxRigidDynamic>()->setKinematicTarget(trans);
+}
+
+void RigidBodyComponent::UpdatePosition(XMFLOAT3 pos, XMFLOAT4 rot)
+{
+
+	PxTransform trans{ pos.x, pos.y, pos.z, PxQuat{rot.x, rot.y, rot.z, rot.w} };
+	m_pActor->setGlobalPose(trans);
+	//m_pActor->is<PxRigidDynamic>()->setKinematicTarget(trans);
+	//m_pActor->is<PxActor>()->(trans);
 }
 
 void RigidBodyComponent::OnSceneAttach(GameScene* pScene)

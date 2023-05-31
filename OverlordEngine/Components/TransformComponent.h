@@ -21,6 +21,7 @@ public:
 
 	void Rotate(float x, float y, float z, bool degrees = true);
 	void Rotate(const XMFLOAT3& rotation, bool degrees = true);
+	void Rotate(const XMFLOAT4& rotation, bool degrees = true);
 	void Rotate(const XMVECTOR& rotation, bool isQuaternion = true);
 
 	void Scale(float x, float y, float z);

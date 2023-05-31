@@ -5,6 +5,8 @@
 #include "Prefabs/SpherePrefab.h"
 #include "Prefabs/CubePrefab.h"
 #include "Prefabs/TorusPrefab.h"
+#include <list>
+
 
 class ExamCharacter;
 class EnemyMeleeCharacter;
@@ -222,17 +224,22 @@ protected:
 	void Update() override;
 	void HandleMagicTransform();
 	void HandleCameraMovement();
+	void HandleUIMovement(const XMFLOAT3 pos);
+	void HandleEmitterMovement(const XMFLOAT3 pos);
 	void Draw() override;
 	void PostDraw() override;
 
 private:
 	//setup
 	PxMaterial* m_Material{};
+	PxMaterial* m_pDefaultMaterial{};
 	XMFLOAT3 m_Size{ 10,10, 10 };
 	ExamCharacter* m_pCharacter{};
 	std::vector<EnemyMeleeCharacter*> m_pMeleeEnemies{ };
+	std::list<EnemyMeleeCharacter*> m_pEnemiesInRange{ };
 	GameObject* m_pSprayMagicEmitter{};
 	GameObject* m_pBeamMagicEmitter{ nullptr };
+	GameObject* m_pBeamMagicEmitterContainer{ nullptr };
 	GameObject* m_pAOEMagicEmitter{ nullptr };
 	GameObject* m_pShieldMagicEmitter{ nullptr };
 	GameObject* m_pLevel{ nullptr };
@@ -262,7 +269,9 @@ private:
 	MagickaCamera* m_pCamera{};
 	int currentLineIndex{ 0 };
 	bool CanIncrease{ true };
-	bool IsExecutingMagic{ true };
+	bool IsExecutingMagic{ false };
+	bool AoeFired{ false };
+	float AoeTimer{ 2 };
 
 	//input
 	enum InputIds
@@ -292,6 +301,7 @@ private:
 	void CreateMagic();
 	void CreateEmitters();
 	void CreateUI();
+	void CreateEnemies();
 
 	//magic helper functions
 	Magic* GetCombinedMagicType(ElementTypes elementType1, ElementTypes elementType2);
@@ -301,14 +311,4 @@ private:
 	void HandlePrint(const ElementTypes currentMagic) const;
 	void HandlePrint(const char currentMagic) const;
 	void HandlePrint2(const Spells spell) const;
-
-	//helpers
-	double Distance3D(XMFLOAT3 p1, XMFLOAT3 p2);
-	bool IsPointInCircle3D(XMFLOAT3 point, XMFLOAT3 circleCenter, double circleRadius);
-	bool CheckRange(double value, double lowerBound, double upperBound);
-
-	bool IsPointNearViewport(const XMFLOAT3& point, float threshold);
-	bool IsPointOnLine(const XMFLOAT3& point, const XMFLOAT3& linePoint1, const XMFLOAT3& linePoint2, float epsilon);
-
-
 };

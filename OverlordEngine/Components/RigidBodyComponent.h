@@ -58,6 +58,8 @@ public:
 	bool IsKinematic() const { return m_IsKinematic; }
 	void SetKinematic(bool isKinematic);
 	void PutToSleep() const;
+	void UpdatePosition(XMFLOAT3 pos, XMFLOAT4 rot);
+	void SetEnableCollision(bool isEnabled) { m_IsEnabled = isEnabled; };
 	void WakeUp() const;
 
 	PxRigidActor* GetPxRigidActor() const { return m_pActor; };
@@ -111,6 +113,7 @@ private:
 
 	bool m_IsStatic{};
 	bool m_IsKinematic{};
+	bool m_IsEnabled{};
 
 	PxFilterData m_CollisionGroups{};
 

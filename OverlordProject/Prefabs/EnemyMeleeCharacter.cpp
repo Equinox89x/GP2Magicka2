@@ -3,20 +3,26 @@
 #include "../OverlordEngine/Prefabs/MagickaCamera.h"
 #include <Scenes/Exam/ExamTestClass.h>
 
-EnemyMeleeCharacter::EnemyMeleeCharacter()
-{}
+EnemyMeleeCharacter::EnemyMeleeCharacter(const CharacterDescExtended& characterDesc):
+	m_CharacterDescExtended{ characterDesc }
+{
+}
 
 void EnemyMeleeCharacter::Initialize(const SceneContext& /*sceneContext*/)
 {
-	
+	//auto go{ new GameObject() };
+	//AddChild(go);
+	//m_pControllerComponent = AddComponent(new ControllerComponent(m_CharacterDescExtended.controller));
 }
 
 void EnemyMeleeCharacter::Update(const SceneContext& sceneContext)
 {
+	float deltaTime = sceneContext.pGameTime->GetElapsed();
+	//constexpr float epsilon{ 0.01f };
+
 	if (CanDamage) {
-		float deltaTime = sceneContext.pGameTime->GetElapsed();
 		if (DamageTimer <= 0) {
-			DamageTimer = 1;
+			DamageTimer = DefaultDamageTimer;
 			m_Health -= DamageToTake;
 			std::cout << m_Health << "\n";
 		}
@@ -25,11 +31,24 @@ void EnemyMeleeCharacter::Update(const SceneContext& sceneContext)
 		}
 	}
 
-	if (m_Health <= 0) {
-		//die
+	auto originalRotation{ GetComponent<ModelComponent>()->GetTransform()->GetWorldRotation() };
+	auto originalLocation{ GetComponent<ModelComponent>()->GetTransform()->GetWorldPosition() };
+
+	auto lookPosition{ m_pCharacter->GetTransform()->GetWorldPosition() };
+	XMVECTOR direction = XMVectorSubtract(XMLoadFloat3(&lookPosition), XMLoadFloat3(&originalLocation));
+	float yaw = std::atan2(XMVectorGetX(direction), XMVectorGetZ(direction));
+	XMFLOAT3 newRot = XMFLOAT3{ originalRotation.x, yaw, originalRotation.z };
+	GetComponent<ModelComponent>()->GetTransform()->Rotate(newRot, false);
+
+	//get forward vector
+	XMFLOAT3 forward{ GetTransform()->GetForward() };
+	originalLocation.x += forward.x * (deltaTime * m_CharacterDescExtended.maxMoveSpeed);
+	originalLocation.z += forward.z * (deltaTime * m_CharacterDescExtended.maxMoveSpeed);
+
+	if (!MathHelper::IsPointInCircle3D(originalLocation, lookPosition, 25)) {
+		GetComponent<ModelComponent>()->GetTransform()->Translate(originalLocation);
 	}
 }
-
 
 void EnemyMeleeCharacter::DrawImGui()
 {
@@ -52,6 +71,7 @@ void EnemyMeleeCharacter::DamageBeamExit(ResultingMagic MagicResult)
 
 void EnemyMeleeCharacter::DamageAOE(ResultingMagic MagicResult)
 {
-	m_Health -= MagicResult.Damage;
+	if(CanDamageAoE) m_Health -= MagicResult.Damage;
+	CanDamageAoE = false;
 	std::cout << m_Health << "\n";
 }

@@ -52,4 +52,47 @@ namespace MathHelper
 		if (value < lo)
 			value = lo;
 	}
+
+	inline double Distance3D(XMFLOAT3 p1, XMFLOAT3 p2) {
+		double dx = p2.x - p1.x;
+		double dy = p2.y - p1.y;
+		double dz = p2.z - p1.z;
+		return std::sqrt(dx * dx + dy * dy + dz * dz);
+	}
+
+	inline bool IsPointInCircle3D(XMFLOAT3 point, XMFLOAT3 circleCenter, double circleRadius) {
+		double dist = Distance3D(point, circleCenter);
+		return (dist <= circleRadius);
+	}
+
+	inline bool IsPointOnLine(const XMFLOAT3& point, const XMFLOAT3& linePoint1, const XMFLOAT3& linePoint2, float epsilon) {
+		float slope = (linePoint2.z - linePoint1.z) / (linePoint2.x - linePoint1.x);
+		float expectedY = linePoint1.z + slope * (point.x - linePoint1.x);
+
+		return std::abs(point.z - expectedY) <= epsilon;
+	}
+
+	inline bool IsPointNearViewport(const XMFLOAT3& point, float threshold, float windowHeight, float windowWidth)
+	{
+		// Calculate the normalized device coordinates (NDC) for the point
+		float ndcX = (point.x + 1.0f) / 2.0f; // Assuming viewport range: -1 to 1
+		float ndcY = (point.z + 1.0f) / 2.0f; // Assuming viewport range: -1 to 1
+
+		// Calculate the screen coordinates for the point
+		int screenX = static_cast<int>(ndcX * windowHeight);
+		int screenY = static_cast<int>(ndcY * windowWidth);
+
+		// Check if the point is within the threshold distance from any border
+		if (screenX < threshold || screenX >(windowHeight - threshold) ||
+			screenY < threshold || screenY >(windowWidth - threshold)) {
+			return true; // Point is near the viewport borders
+		}
+		else {
+			return false; // Point is not near the viewport borders
+		}
+	}
+
+	inline bool CheckRange(double value, double lowerBound, double upperBound) {
+		return value > lowerBound && value < upperBound;
+	}
 }

@@ -28,6 +28,8 @@ void ExamTestClass::Initialize()
 
 	CreateCharacter();
 
+	CreateEnemies();
+
 	CreateInput();
 
 	CreateEmitters();
@@ -94,8 +96,8 @@ void ExamTestClass::SetStartPos()
 void ExamTestClass::CreateLevel()
 {
 	//Ground Plane
-	const auto pDefaultMaterial = PxGetPhysics().createMaterial(0.5f, 0.5f, 0.5f);
-	GameSceneExt::CreatePhysXGroundPlane(*this, pDefaultMaterial);
+	m_pDefaultMaterial = PxGetPhysics().createMaterial(0.5f, 0.5f, 0.5f);
+	GameSceneExt::CreatePhysXGroundPlane(*this, m_pDefaultMaterial);
 
 	//level
 	m_pLevel = new GameObject();
@@ -108,9 +110,9 @@ void ExamTestClass::CreateLevel()
 	m_pLevel->AddComponent(new RigidBodyComponent());
 	m_pLevel->GetComponent<RigidBodyComponent>()->SetKinematic(true);
 	const auto pPxTriangleMesh = ContentManager::Load<PxTriangleMesh>(L"Meshes/level.ovpt");
-	m_pLevel->GetComponent<RigidBodyComponent>()->AddCollider(PxTriangleMeshGeometry(pPxTriangleMesh, PxMeshScale({ 1.f,1.f,1.f })), *pDefaultMaterial);
+	m_pLevel->GetComponent<RigidBodyComponent>()->AddCollider(PxTriangleMeshGeometry(pPxTriangleMesh, PxMeshScale({ 1.f,1.f,1.f })), *m_pDefaultMaterial);
 	//const PxTriangleMesh* mesh{ ContentManager::Load<PxTriangleMesh>(L"Meshes/level.ovpc") };
-	//m_pLevel->GetComponent<RigidBodyComponent>()->AddCollider(mesh, *pDefaultMaterial);
+	//m_pLevel->GetComponent<RigidBodyComponent>()->AddCollider(mesh, *m_pDefaultMaterial);
 
 
 }
@@ -147,12 +149,6 @@ void ExamTestClass::CreateCharacter()
 {
 	//Character
 	CharacterDescExtended characterDesc{ m_Material };
-	/*characterDesc.actionId_MoveForward = CharacterMoveForward;
-	characterDesc.actionId_MoveBackward = CharacterMoveBackward;
-	characterDesc.actionId_MoveLeft = CharacterMoveLeft;
-	characterDesc.actionId_MoveRight = CharacterMoveRight;
-	characterDesc.actionId_Jump = CharacterJump;*/
-
 	characterDesc.actionId_ElementBottom = ElementBottom;
 	characterDesc.actionId_ElementLeft = ElementLeft;
 	characterDesc.actionId_ElementTop = ElementTop;
@@ -166,9 +162,17 @@ void ExamTestClass::CreateCharacter()
 	characterDesc.actionId_Move = Move;
 	characterDesc.actionId_Execute = Execute;
 
+	characterDesc.maxMoveSpeed = 55;
+
 	m_pCharacter = AddChild(new ExamCharacter(characterDesc));
-	m_pCharacter->GetTransform()->Translate(0.f, 5.f, 0.f);
+	m_pCharacter->GetTransform()->Translate(-50.f, 5.f, 100.f);
 	m_pCharacter->AddComponent(new ModelComponent(L"Meshes/wizard.ovm"));
+	
+	//auto go{ new GameObject() };
+	//m_pCharacter->AddChild(go);
+	//go->AddComponent(new RigidBodyComponent());
+	//go->GetComponent<RigidBodyComponent>()->SetKinematic(true);
+	//go->GetComponent<RigidBodyComponent>()->AddCollider(PxTriangleMeshGeometry(pPxTriangleMesh, PxMeshScale({ 0.5f,0.5f,.5f })), *m_pDefaultMaterial);
 
 	m_pCharacter->GetComponent<ModelComponent>()->SetMaterial(m_pMaterial);
 	m_pCharacter->GetTransform()->Scale(0.5f);
@@ -181,15 +185,32 @@ void ExamTestClass::CreateCharacter()
 	m_pCameraComponent = m_pCamera->GetComponent<CameraComponent>();
 	m_pCamera->GetTransform()->Translate(0.f, characterDesc.controller.height * .5f, 0.f);
 	m_SceneContext.pCamera->GetTransform()->Rotate(-45, -90, 0);
+}
 
-	auto enemy = AddChild(new EnemyMeleeCharacter());
-	enemy->GetTransform()->Translate(0.f, 5.f, 0.f);
-	enemy->AddComponent(new ModelComponent(L"Meshes/wizard.ovm"));
+void ExamTestClass::CreateEnemies() {
+	const auto pPxTriangleMesh = ContentManager::Load<PxTriangleMesh>(L"Meshes/wizard.ovpt");
+	CharacterDescExtended enemyDesc{ m_Material };
+	enemyDesc.maxMoveSpeed = 15;
 
-	enemy->GetComponent<ModelComponent>()->SetMaterial(m_pMaterial);
-	enemy->GetTransform()->Scale(0.5f);
-	m_pMeleeEnemies.push_back(enemy);
+	float width{ 50 };
+	for (size_t i = 0; i < 5; i++)
+	{
+		auto enemy = AddChild(new EnemyMeleeCharacter(enemyDesc));
+		enemy->AddComponent(new ModelComponent(L"Meshes/wizard.ovm"));
+		enemy->GetComponent<ModelComponent>()->SetMaterial(m_pMaterial);
 
+		enemy->AddComponent(new RigidBodyComponent());
+		enemy->GetComponent<RigidBodyComponent>()->SetKinematic(true);
+		enemy->GetComponent<RigidBodyComponent>()->AddCollider(PxTriangleMeshGeometry(pPxTriangleMesh, PxMeshScale({ 0.5f,0.5f,.5f })), *m_pDefaultMaterial);
+		
+		enemy->m_pCharacter = m_pCharacter;
+
+		enemy->GetTransform()->Translate(width, 5.f, -100);
+		enemy->GetTransform()->Scale(0.5f);
+
+		m_pMeleeEnemies.push_back(enemy);
+		width -= 30;
+	}
 }
 
 void ExamTestClass::CreateMagic()
@@ -356,27 +377,29 @@ void ExamTestClass::CreateEmitters()
 	m_pSprayMagicEmitter->AddComponent(component);
 
 	auto material = PxGetPhysics().createMaterial(.5f, .5f, .1f);
+
 	//beam
+	m_pBeamMagicEmitterContainer = m_pCharacter->AddChild(new GameObject());
 	m_pBeamMagicEmitter = new CubePrefab(10, 10, 600);
-	m_pCharacter->AddChild(m_pBeamMagicEmitter);
-	m_pBeamMagicEmitter->GetTransform()->Translate(0, 0, 300);
+	m_pBeamMagicEmitterContainer->AddChild(m_pBeamMagicEmitter);
+	m_pBeamMagicEmitter->GetTransform()->Translate(0,0,320);
 	m_pBeamMagicEmitter->AddComponent(new RigidBodyComponent());
 	m_pBeamMagicEmitter->GetComponent<RigidBodyComponent>()->SetKinematic(true);
-	m_pBeamMagicEmitter->GetComponent<RigidBodyComponent>()->AddCollider(PxBoxGeometry{ 10, 10, 600 }, *material);
+	m_pBeamMagicEmitter->GetComponent<RigidBodyComponent>()->AddCollider(PxBoxGeometry{ 2.5f, 2.5f, 150 }, *material);
 	auto colliderInfo = m_pBeamMagicEmitter->GetComponent<RigidBodyComponent>()->GetCollider(0);
 	colliderInfo.SetTrigger(true);
 
-	m_pBeamMagicEmitter->SetOnTriggerCallBack([=](GameObject* /*pTriggerObject*/, GameObject* pOtherObject, PxTriggerAction action)
+	m_pBeamMagicEmitter->SetOnTriggerCallBack([&](GameObject* /*pTriggerObject*/, GameObject* pOtherObject, PxTriggerAction action)
 		{
 			if (action == PxTriggerAction::ENTER)
 			{
-				if (auto enemy{ reinterpret_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
+				if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
 					enemy->DamageBeamEnter(MagicResult);
 				}
 			}
 			if (action == PxTriggerAction::LEAVE)
 			{
-				if (auto enemy{ reinterpret_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
+				if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
 					enemy->DamageBeamExit(MagicResult);
 				}
 			}
@@ -384,31 +407,38 @@ void ExamTestClass::CreateEmitters()
 
 	//aoe
 	m_pAOEMagicEmitter = AddChild(new TorusPrefab(50.f, 50, 20.f, 50, XMFLOAT4{1,0,0,1}));
+	//m_pAOEMagicEmitter = new TorusPrefab(50.f, 50, 20.f, 50, XMFLOAT4{1,0,0,1});
+	//m_pCharacter->AddChild(m_pAOEMagicEmitter);
 	m_pAOEMagicEmitter->AddComponent(component);
 	m_pAOEMagicEmitter->GetTransform()->Rotate(90, 0, 0);
 
 	m_pAOEMagicEmitter->AddComponent(new RigidBodyComponent());
-	m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->AddCollider(PxBoxGeometry{ 50,20,50 }, *material);
+	m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->AddCollider(PxBoxGeometry{ 70,70,70 }, *material);
 	m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->SetKinematic(true);
 
 	colliderInfo = m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->GetCollider(0);
 	colliderInfo.SetTrigger(true);
 
-	m_pAOEMagicEmitter->SetOnTriggerCallBack([=](GameObject* /*pTriggerObject*/, GameObject* pOtherObject, PxTriggerAction action)
+	m_pAOEMagicEmitter->SetOnTriggerCallBack([&](GameObject* /*pTriggerObject*/, GameObject* pOtherObject, PxTriggerAction action)
 		{
 			if (action == PxTriggerAction::ENTER)
 			{
-				if (auto enemy{ reinterpret_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
-					enemy->DamageAOE(MagicResult);
+				if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
+					m_pEnemiesInRange.push_back(enemy);
+				}
+			}
+			if (action == PxTriggerAction::LEAVE)
+			{
+				if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
+
+					m_pEnemiesInRange.remove(enemy);
 				}
 			}
 		});
 
-	//m_pShieldMagicEmitter
-
-	//const auto pDefaultMaterial = PxGetPhysics().createMaterial(0.5f, 0.5f, 0.5f);
+	//shield
 	//const auto pPxTriangleMesh = ContentManager::Load<PxTriangleMesh>(L"Meshes/Sphere.ovpt");
-	//m_pBeamMagicEmitter->GetComponent<RigidBodyComponent>()->AddCollider(PxTriangleMeshGeometry(pPxTriangleMesh, PxMeshScale({ 10.f,10.f,10.f })), *pDefaultMaterial);
+	//m_pShieldMagicEmitter->GetComponent<RigidBodyComponent>()->AddCollider(PxTriangleMeshGeometry(pPxTriangleMesh, PxMeshScale({ 10.f,10.f,10.f })), *m_pDefaultMaterial);
 
 
 	m_pSprayMagicEmitter->SetVisibility(false);
@@ -492,7 +522,7 @@ void ExamTestClass::CreateUI()
 	{
 		auto go{ new GameObject() };
 		m_pUI3->AddChild(go);
-		go->AddComponent(new SpriteComponent(L"Textures/Magicka/Element_water.png"));
+		go->AddComponent(new SpriteComponent(L"Textures/Magicka/Element_none.png"));
 		go->GetTransform()->Translate(width2, height2, 0);
 		go->GetTransform()->Scale(0.6f);
 		width2 += 35;
@@ -508,31 +538,47 @@ void ExamTestClass::OnGUI()
 #pragma region Update
 void ExamTestClass::Update()
 {
-	//for (auto comp : m_pCharacter->GetComponents<ParticleEmitterComponent>()) {
-	//	auto pos = m_pCharacter->GetTransform()->GetPosition();
-	//	//comp->GetTransform()->Translate(pos);
-	//}
-
-	XMFLOAT3 pos{ m_pCharacter->GetTransform()->GetForward() };
+	float deltaTime = m_SceneContext.pGameTime->GetElapsed();
 	XMFLOAT3 pos2{ m_pCharacter->GetTransform()->GetWorldPosition()};
-	pos.x *= 400 + pos2.x;
-	pos.z *= 400 + pos2.z;
-	m_pAOEMagicEmitter->GetTransform()->Translate(pos2);
-	//m_pBeamMagicEmitter->GetComponent<RigidBodyComponent>()->Translate(pos);
 
-	//pos2.z -= 20;
-	//pos2.x -= 20;
-	XMVECTOR screenPosition = XMVector3Project(XMLoadFloat3(&pos2), 0, 0, m_SceneContext.windowWidth, m_SceneContext.windowHeight, 0.0f, 1.0f, XMLoadFloat4x4(&m_SceneContext.pCamera->GetProjection()), XMLoadFloat4x4(&m_SceneContext.pCamera->GetView()), XMMatrixIdentity());
-	XMFLOAT3 screenPos;
-	XMStoreFloat3(&screenPos, screenPosition);
-	screenPos.x -= 90;
-	screenPos.y += 30;
+	HandleEmitterMovement(pos2);
 
-	m_pUI3->GetTransform()->Translate(screenPos);
+	HandleUIMovement(pos2);
 
 	HandleCameraMovement();
 
 	HandleMagicTransform();
+
+	if (AoeFired) {
+		AoeTimer -= deltaTime;
+		if (AoeTimer <= 0) {
+			ResetCombo();
+		}
+	}
+
+	for (auto enemy : m_pMeleeEnemies) {
+		if (enemy->GetHealth() <= 0) {
+			m_pMeleeEnemies.erase(std::remove(m_pMeleeEnemies.begin(), m_pMeleeEnemies.end(), enemy));
+			RemoveChild(enemy);
+		}
+	}
+}
+
+void ExamTestClass::HandleEmitterMovement(const XMFLOAT3 pos) {
+	XMFLOAT3 pos2{ m_pCharacter->GetTransform()->GetForward() };
+	pos2.x *= 400 + pos.x;
+	pos2.z *= 400 + pos.z;
+	m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->UpdatePosition(pos, m_pAOEMagicEmitter->GetTransform()->GetRotation());
+	m_pBeamMagicEmitter->GetTransform()->Rotate(XMFLOAT3{ 0,0,0 });
+}
+
+void ExamTestClass::HandleUIMovement(const XMFLOAT3 pos) {
+	XMVECTOR screenPosition = XMVector3Project(XMLoadFloat3(&pos), 0, 0, m_SceneContext.windowWidth, m_SceneContext.windowHeight, 0.0f, 1.0f, XMLoadFloat4x4(&m_SceneContext.pCamera->GetProjection()), XMLoadFloat4x4(&m_SceneContext.pCamera->GetView()), XMMatrixIdentity());
+	XMFLOAT3 screenPos;
+	XMStoreFloat3(&screenPos, screenPosition);
+	screenPos.x -= 90;
+	screenPos.y += 30;
+	m_pUI3->GetTransform()->Translate(screenPos);
 }
 
 void ExamTestClass::HandleMagicTransform()
@@ -576,18 +622,18 @@ void ExamTestClass::HandleCameraMovement()
 	XMFLOAT3 projectedPoint = { pos1.x + (projection * lineDir.x), pos1.y + (projection * lineDir.y), pos1.z + (projection * lineDir.z) };
 
 	XMFLOAT3 newPos{ projectedPoint.x, pos1.y, projectedPoint.z };
-	if (IsPointInCircle3D(newPos, pos2, 0.5f)) {
-		if (CanIncrease) {
-			currentLineIndex++;
-			CanIncrease = false;
-		}
-	}	
-	else if (IsPointInCircle3D(newPos, pos1, 0.5f)) {
+	if (MathHelper::IsPointInCircle3D(newPos, pos1, 0.5f)) {
 		if (CanIncrease) {
 			currentLineIndex--;
 			CanIncrease = false;
 		}
 	}
+	else if (MathHelper::IsPointInCircle3D(newPos, pos2, 0.5f)) {
+		if (CanIncrease) {
+			currentLineIndex++;
+			CanIncrease = false;
+		}
+	}	
 	else {
 	}
 
@@ -595,9 +641,9 @@ void ExamTestClass::HandleCameraMovement()
 	auto newpos1{ m_pCamera->m_LinePoints[currentLineIndex].points[0] };
 	auto newpos2{ m_pCamera->m_LinePoints[currentLineIndex].points[1] };
 	
-	if (CheckRange(newPos.x, newpos1.x, newpos2.x) ||
+	if (MathHelper::CheckRange(newPos.x, newpos1.x, newpos2.x) ||
 		//newpos1.y < y && y < newpos2.y ||
-		CheckRange(newPos.z, newpos1.z, newpos2.z)) {
+		MathHelper::CheckRange(newPos.z, newpos1.z, newpos2.z)) {
 		CanIncrease = true;
 
 	}
@@ -730,23 +776,47 @@ void ExamTestClass::ExecuteMagicCombo()
 
 void ExamTestClass::ExecuteAOE()
 {
-	auto components{ m_pAOEMagicEmitter->GetComponents<ParticleEmitterComponent>() };
-	MagicResult.ProjectileType = ProjectileTypes::AOE;
+	if (!IsExecutingMagic) {
+		IsExecutingMagic = true;
+		auto components{ m_pAOEMagicEmitter->GetComponents<ParticleEmitterComponent>() };
+		MagicResult.ProjectileType = ProjectileTypes::AOE;
 
-	for (size_t i = 0; i < m_ComboBar.size(); i++)
-	{
-		auto type{ m_ComboBar[i] };
-		//add modifiers to the result magic
-		const auto magic{ std::find_if(MagicResult.Modifiers.begin(), MagicResult.Modifiers.end(), [&](const ElementTypes& magic) {
-			return magic == type.ElementType;
-		}) };
-		if (magic == MagicResult.Modifiers.end()) {
-			MagicResult.Modifiers.push_back(type.ElementType);
+		for (size_t i = 0; i < m_ComboBar.size(); i++)
+		{
+			auto type{ m_ComboBar[i] };
+			//add modifiers to the result magic
+			const auto magic{ std::find_if(MagicResult.Modifiers.begin(), MagicResult.Modifiers.end(), [&](const ElementTypes& magic) {
+				return magic == type.ElementType;
+			}) };
+			if (magic == MagicResult.Modifiers.end()) {
+				MagicResult.Modifiers.push_back(type.ElementType);
+			}
 		}
-	}
 
-	if (MagicResult.Modifiers.size() > 0 && m_ComboBar.size() > 0) {
-		m_pAOEMagicEmitter->SetVisibility(true);
+		////find most occuring character in the pattern
+		const auto count = std::unordered_multiset<char>{ m_ComboPattern.begin(), m_ComboPattern.end() };
+		const auto comparator = [count](auto a, auto b) { return count.count(a) < count.count(b); };
+		if (!count.empty()) {
+			auto character{ *std::max_element(count.begin(), count.end(), comparator) };
+			const auto selectedMagic{ std::find_if(m_Magics.begin(), m_Magics.end(), [&](const Magic& magic) {
+				return magic.ElementType == static_cast<ElementTypes>(character);
+			}) };
+			if (selectedMagic != m_Magics.end()) {
+				MagicResult.Damage = selectedMagic->DefaultMagicType.AoEDamage;
+			}
+		}
+
+		if (MagicResult.Modifiers.size() > 0 && m_ComboBar.size() > 0) {
+			m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->SetEnableCollision(true);
+			m_pAOEMagicEmitter->SetVisibility(true);
+			m_pSprayMagicEmitter->SetVisibility(false);
+			m_pBeamMagicEmitter->SetVisibility(false);
+			AoeFired = true;
+			for (auto enemy : m_pEnemiesInRange) {
+				enemy->SetCanDamage(true);
+				enemy->DamageAOE(MagicResult);
+			}
+		}
 	}
 }
 
@@ -767,7 +837,9 @@ void ExamTestClass::ExecuteSword()
 		ResetCombo();
 	}
 	else {
+		//sword cast
 		//sword attack
+		
 	}
 }
 
@@ -784,6 +856,16 @@ void ExamTestClass::ResetCombo()
 	MagicResult.TextureName.clear();
 	MagicResult.AOETextureName.clear();
 	IsExecutingMagic = false;
+
+	AoeFired = false;
+	AoeTimer = 2;
+
+	
+	for (auto go : m_pUI3->GetChildren<GameObject>()) {
+		go->GetComponent<SpriteComponent>()->SetTexture(L"Textures/Magicka/Element_none.png");
+	}
+
+	m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->SetEnableCollision(false);
 }
 #pragma endregion
 
@@ -824,8 +906,6 @@ bool ExamTestClass::IsMagicCancelled(int currentIterator, const Magic* currentMa
 {
 	for (ElementTypes cancellingMagicType : m_ComboBar[currentIterator].CancellingMagicTypes) {
 		if (cancellingMagicType == currentMagic->ElementType) {
-			m_ComboBar.pop_back();
-			m_ComboPattern.pop_back();
 			foundCanceller = true;
 			std::cout << "CANCELLED" << ", Pattern: " << m_ComboPattern << std::endl;
 			return true;
@@ -846,7 +926,6 @@ void ExamTestClass::HandleCombobarFilling(ElementTypes elementType)
 	const int currentIterator{ static_cast<int>(m_ComboBar.size()) - 1 };
 	bool foundCanceller{ false };
 
-
 	if (m_ComboBar.empty()) {
 		//push the magic
 		m_ComboBar.push_back(*currentMagic);
@@ -855,11 +934,22 @@ void ExamTestClass::HandleCombobarFilling(ElementTypes elementType)
 	}
 	else if (m_ComboBar.size() >= 5) {
 		//remove element from pattern if opposite and return
-		if (IsMagicCancelled(currentIterator, currentMagic, foundCanceller)) return;
+		if (IsMagicCancelled(currentIterator, currentMagic, foundCanceller)) {
+			m_pUI3->GetChildren<GameObject>()[m_ComboBar.size()-1]->GetComponent<SpriteComponent>()->SetTexture(L"Textures/Magicka/Element_none.png");
+			m_ComboBar.pop_back();
+			m_ComboPattern.pop_back();
+			return;
+		}
 	}
 	else if (!m_ComboBar.empty() && m_ComboBar.size() < 5) {
 		//remove element from pattern if opposite and return
-		if (IsMagicCancelled(currentIterator, currentMagic, foundCanceller)) return;
+		if (IsMagicCancelled(currentIterator, currentMagic, foundCanceller))
+		{
+			m_pUI3->GetChildren<GameObject>()[m_ComboBar.size()-1]->GetComponent<SpriteComponent>()->SetTexture(L"Textures/Magicka/Element_none.png");
+			m_ComboBar.pop_back();
+			m_ComboPattern.pop_back();
+			return;
+		}
 
 		//get the previous elemet to check against (for element combination)
 		const Magic prevMagic{ m_ComboBar[currentIterator] };
@@ -960,50 +1050,5 @@ void ExamTestClass::HandlePrint2(Spells spell) const {
 	}
 
 	std::cout << "Casted spell: " << name << std::endl;
-}
-#pragma endregion
-
-#pragma region Math
-bool ExamTestClass::IsPointNearViewport(const XMFLOAT3& point, float threshold)
-{
-	// Calculate the normalized device coordinates (NDC) for the point
-	float ndcX = (point.x + 1.0f) / 2.0f; // Assuming viewport range: -1 to 1
-	float ndcY = (point.z + 1.0f) / 2.0f; // Assuming viewport range: -1 to 1
-
-	// Calculate the screen coordinates for the point
-	int screenX = static_cast<int>(ndcX * m_SceneContext.windowHeight);
-	int screenY = static_cast<int>(ndcY * m_SceneContext.windowWidth);
-
-	// Check if the point is within the threshold distance from any border
-	if (screenX < threshold || screenX >(m_SceneContext.windowHeight - threshold) ||
-		screenY < threshold || screenY >(m_SceneContext.windowWidth - threshold)) {
-		return true; // Point is near the viewport borders
-	}
-	else {
-		return false; // Point is not near the viewport borders
-	}
-}
-
-bool ExamTestClass::IsPointOnLine(const XMFLOAT3& point, const XMFLOAT3& linePoint1, const XMFLOAT3& linePoint2, float epsilon) {
-	float slope = (linePoint2.z - linePoint1.z) / (linePoint2.x - linePoint1.x);
-	float expectedY = linePoint1.z + slope * (point.x - linePoint1.x);
-
-	return std::abs(point.z - expectedY) <= epsilon;
-}
-
-double ExamTestClass::Distance3D(XMFLOAT3 p1, XMFLOAT3 p2) {
-	double dx = p2.x - p1.x;
-	double dy = p2.y - p1.y;
-	double dz = p2.z - p1.z;
-	return std::sqrt(dx * dx + dy * dy + dz * dz);
-}
-
-bool ExamTestClass::IsPointInCircle3D(XMFLOAT3 point, XMFLOAT3 circleCenter, double circleRadius) {
-	double dist = Distance3D(point, circleCenter);
-	return (dist <= circleRadius);
-}
-
-bool ExamTestClass::CheckRange(double value, double lowerBound, double upperBound) {
-	return value > lowerBound && value < upperBound;
 }
 #pragma endregion

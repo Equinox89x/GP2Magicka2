@@ -149,6 +149,11 @@ void TransformComponent::Rotate(const XMFLOAT3& rotation, bool areDegrees)
 	Rotate(rotation.x, rotation.y, rotation.z, areDegrees);
 }
 
+void TransformComponent::Rotate(const XMFLOAT4& rotation, bool areDegrees)
+{
+	Rotate(rotation.x, rotation.y, rotation.z, areDegrees);
+}
+
 void TransformComponent::Rotate(const XMVECTOR& rotation, bool isQuaternion)
 {
 	//if (!CheckConstraints())
