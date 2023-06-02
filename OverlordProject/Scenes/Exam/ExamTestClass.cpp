@@ -2,7 +2,9 @@
 #include "ExamTestClass.h"
 #include <Prefabs/ExamCharacter.h>
 #include <Prefabs/EnemyMeleeCharacter.h>
+#include <Prefabs/ExamRangedCharacter.h>
 #include <unordered_set>
+#include <Prefabs/Projectile.h>
 
 #pragma region Setup
 void ExamTestClass::Initialize()
@@ -38,6 +40,8 @@ void ExamTestClass::Initialize()
 	m_pCameraComponent->GetTransform()->Translate(300, 400, -100);
 
 	CreateUI();
+
+	m_pProjectileHolder = AddChild(new GameObject());
 }
 
 void ExamTestClass::SetStartPos()
@@ -157,32 +161,57 @@ void ExamTestClass::CreateCharacter()
 }
 
 void ExamTestClass::CreateDamager() {
-	m_pDamageCollider = new GameObject();
-	AddChild(m_pDamageCollider);
-	m_pDamageCollider->AddComponent(new RigidBodyComponent());
-	m_pDamageCollider->GetComponent<RigidBodyComponent>()->AddCollider(PxBoxGeometry{ 30,30,30 }, *m_pDefaultMaterial);
-	m_pDamageCollider->GetComponent<RigidBodyComponent>()->SetKinematic(true);
+	m_pPlayerDamageTakingCollider = new GameObject();
+	AddChild(m_pPlayerDamageTakingCollider);
+	m_pPlayerDamageTakingCollider->AddComponent(new RigidBodyComponent());
+	m_pPlayerDamageTakingCollider->GetComponent<RigidBodyComponent>()->AddCollider(PxBoxGeometry{ 30,30,30 }, *m_pDefaultMaterial);
+	m_pPlayerDamageTakingCollider->GetComponent<RigidBodyComponent>()->SetKinematic(true);
 
-	auto colliderInfo = m_pDamageCollider->GetComponent<RigidBodyComponent>()->GetCollider(0);
+	auto colliderInfo = m_pPlayerDamageTakingCollider->GetComponent<RigidBodyComponent>()->GetCollider(0);
 	colliderInfo.SetTrigger(true);
 
-	m_pDamageCollider->SetOnTriggerCallBack([&](GameObject* /*pTriggerObject*/, GameObject* pOtherObject, PxTriggerAction action)
+	m_pPlayerDamageTakingCollider->SetOnTriggerCallBack([&](GameObject* /*pTriggerObject*/, GameObject* pOtherObject, PxTriggerAction action)
+	{
+		if (action == PxTriggerAction::ENTER)
 		{
+			if (auto hittingEnemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
+				m_pCharacter->DamagePlayer(true, hittingEnemy->GetAttackDamage());
+			}
+		}
+		if (action == PxTriggerAction::LEAVE)
+		{
+			if (auto hittingEnemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
+				m_pCharacter->DamagePlayer(false, hittingEnemy->GetAttackDamage());
+			}
+		}
+	});
+	
+	m_pPlayerMaxEnemyRangeCollider = new GameObject();
+	AddChild(m_pPlayerMaxEnemyRangeCollider);
+	m_pPlayerMaxEnemyRangeCollider->AddComponent(new RigidBodyComponent());
+	m_pPlayerMaxEnemyRangeCollider->GetComponent<RigidBodyComponent>()->AddCollider(PxBoxGeometry{ 200,30,200 }, *m_pDefaultMaterial);
+	m_pPlayerMaxEnemyRangeCollider->GetComponent<RigidBodyComponent>()->SetKinematic(true);
+
+	colliderInfo = m_pPlayerMaxEnemyRangeCollider->GetComponent<RigidBodyComponent>()->GetCollider(0);
+	colliderInfo.SetTrigger(true);
+
+	m_pPlayerMaxEnemyRangeCollider->SetOnTriggerCallBack([&](GameObject* /*pTriggerObject*/, GameObject* pOtherObject, PxTriggerAction action)
+	{
 			if (action == PxTriggerAction::ENTER)
 			{
-				if (auto hittingEnemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
-					m_pCharacter->DamagePlayer(true, hittingEnemy->GetAttackDamage());
+				if (auto enemy{ dynamic_cast<ExamRangedCharacter*>(pOtherObject) }) {
+					enemy->SetCanMove(false);
+					enemy->SetCanShoot(true);
 				}
-
 			}
 	if (action == PxTriggerAction::LEAVE)
 	{
-		if (auto hittingEnemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
-			m_pCharacter->DamagePlayer(false, hittingEnemy->GetAttackDamage());
+		if (auto enemy{ dynamic_cast<ExamRangedCharacter*>(pOtherObject) }) {
+			enemy->SetCanMove(true);
+			enemy->SetCanShoot(false);
 		}
-
 	}
-		});
+	});
 }
 
 void ExamTestClass::CreateEnemies() {
@@ -211,12 +240,18 @@ void ExamTestClass::CreateEnemies() {
 			{
 				if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
 					enemy->SetCanMove(false);
-				}				
+				}	
+				if (auto enemy2{ dynamic_cast<ExamRangedCharacter*>(pOtherObject) }) {
+					enemy2->SetCanMove(false);
+				}
 			}
 			if (action == PxTriggerAction::LEAVE)
 			{
 				if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
 					enemy->SetCanMove(true);
+				}
+				if (auto enemy2{ dynamic_cast<ExamRangedCharacter*>(pOtherObject) }) {
+					enemy2->SetCanMove(true);
 				}
 			}
 		});
@@ -226,46 +261,91 @@ void ExamTestClass::CreateEnemies() {
 		m_pMeleeEnemies.push_back(enemy);
 		width -= 30;
 	}
+
+	CharacterDescExtended enemyRangedDesc{ m_Material };
+	enemyRangedDesc.maxMoveSpeed = 55;
+
+	width = 50 ;
+	for (size_t i = 0; i < 5; i++)
+	{
+		ExamRangedCharacter* enemy = new ExamRangedCharacter(enemyRangedDesc, XMFLOAT3{ width, 5.f, -150 });
+		AddChild(enemy);
+		enemy->AddComponent(new ModelComponent(L"Meshes/wizard.ovm"));
+		enemy->GetComponent<ModelComponent>()->SetMaterial(m_pMaterial);
+
+		enemy->AddComponent(new RigidBodyComponent());
+		enemy->GetComponent<RigidBodyComponent>()->SetKinematic(true);
+		enemy->GetComponent<RigidBodyComponent>()->AddCollider(PxBoxGeometry{10,50,10}, *m_pDefaultMaterial);
+		enemy->GetComponent<RigidBodyComponent>()->AddCollider(PxBoxGeometry{10,50,10}, *m_pDefaultMaterial);
+		
+		auto colliderInfo = enemy->GetComponent<RigidBodyComponent>()->GetCollider(0);
+		colliderInfo.SetTrigger(true);
+
+		enemy->SetOnTriggerCallBack([&](GameObject* /*pTriggerObject*/, GameObject* pOtherObject, PxTriggerAction action)
+		{
+			if (action == PxTriggerAction::ENTER)
+			{
+				if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
+					enemy->SetCanMove(false);
+				}	
+				if (auto enemy2{ dynamic_cast<ExamRangedCharacter*>(pOtherObject) }) {
+					enemy2->SetCanMove(false);
+				}				
+			}
+			if (action == PxTriggerAction::LEAVE)
+			{
+				if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
+					enemy->SetCanMove(true);
+				}
+				if (auto enemy2{ dynamic_cast<ExamRangedCharacter*>(pOtherObject) }) {
+					enemy2->SetCanMove(true);
+				}
+			}
+		});
+
+		enemy->m_pCharacter = m_pCharacter;
+		enemy->GetTransform()->Scale(0.5f);
+		m_pRangedEnemies.push_back(enemy);
+		width -= 30;
+	}
 }
 
 void ExamTestClass::CreateMagic()
 {
-	const MagicTypes earthBomb{ ElementTypes::EARTH, ProjectileTypes::PROJECTILEBOMB, 75 };
-	const MagicTypes iceBomb{ ElementTypes::EARTH, ProjectileTypes::PROJECTILEBOMB, 137.5f };
-	const MagicTypes arcaneBomb{ ElementTypes::EARTH, ProjectileTypes::PROJECTILEBOMB, 425 };
-	const MagicTypes lifeBomb{ ElementTypes::EARTH, ProjectileTypes::PROJECTILEBOMB, 360 };
-	const MagicTypes steamBomb{ ElementTypes::EARTH, ProjectileTypes::PROJECTILEBOMB, 280 };
-	const MagicTypes waterBomb{ ElementTypes::EARTH, ProjectileTypes::PROJECTILEBOMB, 0 };
-	const MagicTypes fireBomb{ ElementTypes::EARTH, ProjectileTypes::PROJECTILEBOMB, 60 };
-	const MagicTypes coldBomb{ ElementTypes::EARTH, ProjectileTypes::PROJECTILEBOMB, 25 };
+	const MagicTypes earthBomb{ ElementTypes::EARTH, ProjectileTypes::PROJECTILEBOMB, 75, 18 }; //default
+	const MagicTypes iceBarrage{ ElementTypes::ICE, ProjectileTypes::PROJECTILE, 60, 12 }; //default
+	const MagicTypes arcaneBeam{ ElementTypes::NONE, ProjectileTypes::BEAM, 106.25f, 30 }; //default
+	const MagicTypes lifeBeam{ ElementTypes::NONE, ProjectileTypes::BEAM, -89, 27 }; //default
+	const MagicTypes steamSpray{ ElementTypes::NONE, ProjectileTypes::SPRAY, 70, 23 }; //default
+	const MagicTypes lightningSpray{ ElementTypes::NONE, ProjectileTypes::SPRAY, 51.25, 20 }; //default
+	const MagicTypes fireSpray{ ElementTypes::NONE, ProjectileTypes::SPRAY, 15, 7 }; //default
+	const MagicTypes waterSpray{ ElementTypes::NONE, ProjectileTypes::SPRAY, 0, 0 }; //default
+	const MagicTypes coldSpray2{ ElementTypes::NONE, ProjectileTypes::SPRAY, 0, 0 }; //default
+	const MagicTypes poisonSpray{ ElementTypes::NONE, ProjectileTypes::SPRAY, 90, 26 }; //default
+	const MagicTypes shieldShield{ ElementTypes::NONE, ProjectileTypes::SHIELD, 0, 0 }; //default
 
-	const MagicTypes arcaneBeam{ ElementTypes::NONE, ProjectileTypes::BEAM, 106.25f };
-	const MagicTypes lifeBeam{ ElementTypes::NONE, ProjectileTypes::BEAM, 89 };
-	const MagicTypes steamBeam{ ElementTypes::NONE, ProjectileTypes::BEAM, 90 };
-	const MagicTypes lightningBeam{ ElementTypes::NONE, ProjectileTypes::BEAM, 51.25f };
-	const MagicTypes waterBeam{ ElementTypes::NONE, ProjectileTypes::BEAM, 0 };
-	const MagicTypes fireBeam{ ElementTypes::NONE, ProjectileTypes::BEAM, 30 };
-	const MagicTypes coldBeam{ ElementTypes::NONE, ProjectileTypes::BEAM, 12.5 };
+	const MagicTypes iceBomb{ ElementTypes::EARTH, ProjectileTypes::PROJECTILEBOMB, 137.5f, 25 };
+	const MagicTypes arcaneBomb{ ElementTypes::EARTH, ProjectileTypes::PROJECTILEBOMB, 425, 80 };
+	const MagicTypes lifeBomb{ ElementTypes::EARTH, ProjectileTypes::PROJECTILEBOMB, 360, 70 };
+	const MagicTypes steamBomb{ ElementTypes::EARTH, ProjectileTypes::PROJECTILEBOMB, 280, 60 };
+	const MagicTypes waterBomb{ ElementTypes::EARTH, ProjectileTypes::PROJECTILEBOMB, 0, 0 };
+	const MagicTypes fireBomb{ ElementTypes::EARTH, ProjectileTypes::PROJECTILEBOMB, 60, 12 };
+	const MagicTypes coldBomb{ ElementTypes::EARTH, ProjectileTypes::PROJECTILEBOMB, 25, 15 };
 
-	const MagicTypes iceBarrage{ ElementTypes::ICE, ProjectileTypes::PROJECTILE, 60 };
-	const MagicTypes arcaneBarrage{ ElementTypes::ICE, ProjectileTypes::PROJECTILE, 42.5f };
-	const MagicTypes lifeBarrage{ ElementTypes::ICE, ProjectileTypes::PROJECTILE, 60 };
-	const MagicTypes lightningBarrage{ ElementTypes::ICE, ProjectileTypes::PROJECTILE, 42.5f };
-	const MagicTypes coldBarrage{ ElementTypes::ICE, ProjectileTypes::PROJECTILE, 0 };
-	const MagicTypes waterBarrage{ ElementTypes::ICE, ProjectileTypes::PROJECTILE, 0 };
+	const MagicTypes steamBeam{ ElementTypes::NONE, ProjectileTypes::BEAM, 90, 35 };
+	const MagicTypes lightningBeam{ ElementTypes::NONE, ProjectileTypes::BEAM, 51.25f, 25 };
+	const MagicTypes waterBeam{ ElementTypes::NONE, ProjectileTypes::BEAM, 0, 0 };
+	const MagicTypes fireBeam{ ElementTypes::NONE, ProjectileTypes::BEAM, 30, 15 };
+	const MagicTypes coldBeam{ ElementTypes::NONE, ProjectileTypes::BEAM, 12.5, 8 };
 
-	const MagicTypes steamSpray{ ElementTypes::NONE, ProjectileTypes::SPRAY, 70 };
-	const MagicTypes lightningSpray{ ElementTypes::NONE, ProjectileTypes::SPRAY, 0 };
-	const MagicTypes fireSpray{ ElementTypes::NONE, ProjectileTypes::SPRAY, 15 };
-	const MagicTypes waterSpray{ ElementTypes::NONE, ProjectileTypes::SPRAY, 0 };
+	const MagicTypes arcaneBarrage{ ElementTypes::ICE, ProjectileTypes::PROJECTILE, 42.5f, 20 };
+	const MagicTypes lifeBarrage{ ElementTypes::ICE, ProjectileTypes::PROJECTILE, 60, 12 };
+	const MagicTypes lightningBarrage{ ElementTypes::ICE, ProjectileTypes::PROJECTILE, 42.5f, 30 };
+	const MagicTypes coldBarrage{ ElementTypes::ICE, ProjectileTypes::PROJECTILE, 0, 0 };
+	const MagicTypes waterBarrage{ ElementTypes::ICE, ProjectileTypes::PROJECTILE, 0, 0 };
 
-	const MagicTypes lightningSpray2{ ElementTypes::LIGHTNING, ProjectileTypes::SPRAY, 31.25f };
-	const MagicTypes fireSpray2{ ElementTypes::LIGHTNING, ProjectileTypes::SPRAY, 0 };
-	const MagicTypes coldSpray2{ ElementTypes::LIGHTNING, ProjectileTypes::SPRAY, 0 };
-
-	const MagicTypes poisonSpray{ ElementTypes::NONE, ProjectileTypes::SPRAY, 0 };
-
-	const MagicTypes shieldShield{ ElementTypes::NONE, ProjectileTypes::SHIELD, 0 };
+	const MagicTypes lightningSpray2{ ElementTypes::LIGHTNING, ProjectileTypes::SPRAY, 31.25f, 15 };
+	const MagicTypes fireSpray2{ ElementTypes::LIGHTNING, ProjectileTypes::SPRAY, 0, 0 };
 
 	m_MagicTypes = { earthBomb, iceBomb, arcaneBomb, lifeBomb, steamBomb, waterBomb, fireBomb, coldBomb,
 		arcaneBeam, lifeBeam, steamBeam, lightningBeam, waterBeam, fireBeam, coldBeam,
@@ -320,75 +400,32 @@ void ExamTestClass::CreateMagic()
 void ExamTestClass::CreateEmitters()
 {
 	//spray
-	float value{ 50 };
+	float value{ 150 };
 	ParticleEmitterSettings settings{};
 	settings.velocity = { 0.f,0.f, value };
 	settings.originalVelocity = { 0.f,0.f, value };
 	settings.modifier = { 1, 1, 1 };
-	settings.minSize = 20.f;
-	settings.maxSize = 20.f;
+	settings.minSize = 10.f;
+	settings.maxSize = 10.f;
 	settings.minEnergy = 1.f;
 	settings.maxEnergy = 2.f;
-	settings.minScale = 3.5f;
-	settings.maxScale = 5.5f;
+	settings.minScale = 1.5f;
+	settings.maxScale = 200.5f;
 	settings.minEmitterRadius = .2f;
 	settings.maxEmitterRadius = .5f;
 	settings.color = { 1.f,1.f,1.f, .6f };
 
 	m_pSprayMagicEmitter = AddChild(new GameObject());
-	settings.originalVelocity = { value, 0.f, value };
-	settings.modifier = { 1, 0.f, 1 };
+	settings.originalVelocity = { value, 0.f, 0 };
+	settings.modifier = { 1, 0.f, 0.f };
 	auto component = new ParticleEmitterComponent(L"Textures/Smoke.png", settings, 200);
+	component->SetShouldIncreaseOverTime(true);
 	m_pSprayMagicEmitter->AddComponent(component);
 
-	settings.originalVelocity = { value, 0.f, -value };
-	settings.modifier = { 1, 0.f, 1 };
-	component = new ParticleEmitterComponent(L"Textures/Smoke.png", settings, 200);
-	m_pSprayMagicEmitter->AddComponent(component);
-
-	settings.originalVelocity = { value, 0.f, value / 2 };
-	settings.modifier = { 1, 0.f, 0.5 };
-	component = new ParticleEmitterComponent(L"Textures/Smoke.png", settings, 200);
-	m_pSprayMagicEmitter->AddComponent(component);
-
-	settings.originalVelocity = { value, 0.f, -value / 2 };
-	settings.modifier = { 1, 0.f, 0.5 };
-	component = new ParticleEmitterComponent(L"Textures/Smoke.png", settings, 200);
-	m_pSprayMagicEmitter->AddComponent(component);
-
-	settings.originalVelocity = { value, 0.f, 0.f };
+	settings.originalVelocity = { value, 0.f, 0 };
 	settings.modifier = { 1, 0.f, 0.f };
 	component = new ParticleEmitterComponent(L"Textures/Smoke.png", settings, 200);
-	m_pSprayMagicEmitter->AddComponent(component);
-
-	settings.originalVelocity = { value, 0.f, 0.f };
-	settings.modifier = { 1, 0.f, 0.f };
-	component = new ParticleEmitterComponent(L"Textures/Smoke.png", settings, 200);
-	m_pSprayMagicEmitter->AddComponent(component);
-
-	settings.originalVelocity = { value, 0.f, value / 4 };
-	settings.modifier = { 1, 0.f, 0.f };
-	component = new ParticleEmitterComponent(L"Textures/Smoke.png", settings, 200);
-	m_pSprayMagicEmitter->AddComponent(component);
-
-	settings.originalVelocity = { value, 0.f, value / 1.5f };
-	settings.modifier = { 1, 0.f, 0.f };
-	component = new ParticleEmitterComponent(L"Textures/Smoke.png", settings, 200);
-	m_pSprayMagicEmitter->AddComponent(component);
-
-	settings.originalVelocity = { value, 0.f, 0.f };
-	settings.modifier = { 1, 0.f, 0.f };
-	component = new ParticleEmitterComponent(L"Textures/Smoke.png", settings, 200);
-	m_pSprayMagicEmitter->AddComponent(component);
-
-	settings.originalVelocity = { value, 0.f, -value / 4 };
-	settings.modifier = { 1, 0.f, 0.f };
-	component = new ParticleEmitterComponent(L"Textures/Smoke.png", settings, 200);
-	m_pSprayMagicEmitter->AddComponent(component);
-
-	settings.originalVelocity = { value, 0.f, -value / 1.5f };
-	settings.modifier = { 1, 0.f, 0.f };
-	component = new ParticleEmitterComponent(L"Textures/Smoke.png", settings, 200);
+	component->SetShouldIncreaseOverTime(true);
 	m_pSprayMagicEmitter->AddComponent(component);
 
 	//beam
@@ -407,13 +444,19 @@ void ExamTestClass::CreateEmitters()
 			if (action == PxTriggerAction::ENTER)
 			{
 				if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
-					enemy->DamageBeamEnter(MagicResult);
+					enemy->DamageBeamEnter(MagicResult.Damage);
+				}
+				if (auto enemy2{ dynamic_cast<ExamRangedCharacter*>(pOtherObject) }) {
+					enemy2->DamageBeamEnter(MagicResult.Damage);
 				}
 			}
 			if (action == PxTriggerAction::LEAVE)
 			{
 				if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
-					enemy->DamageBeamExit(MagicResult);
+					enemy->DamageBeamExit();
+				}
+				if (auto enemy2{ dynamic_cast<ExamRangedCharacter*>(pOtherObject) }) {
+					enemy2->DamageBeamExit();
 				}
 			}
 		});
@@ -432,27 +475,56 @@ void ExamTestClass::CreateEmitters()
 	colliderInfo = m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->GetCollider(0);
 	colliderInfo.SetTrigger(true);
 
-	m_pAOEMagicEmitter->SetOnTriggerCallBack([&](GameObject* /*pTriggerObject*/, GameObject* pOtherObject, PxTriggerAction action)
-		{
-			if (action == PxTriggerAction::ENTER)
-			{
-				if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
-					m_pEnemiesInRange.push_back(enemy);
-				}
-			}
-			if (action == PxTriggerAction::LEAVE)
-			{
-				if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
+	//m_pAOEMagicEmitter->SetOnTriggerCallBack([&](GameObject* /*pTriggerObject*/, GameObject* pOtherObject, PxTriggerAction action)
+	//	{
+	//		if (action == PxTriggerAction::ENTER)
+	//		{
+	//			if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
+	//				m_pEnemiesInAoERange.push_back(enemy);
+	//			}
+	//		}
+	//		if (action == PxTriggerAction::LEAVE)
+	//		{
+	//			if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
 
-					m_pEnemiesInRange.remove(enemy);
-				}
-			}
-		});
+	//				m_pEnemiesInAoERange.remove(enemy);
+	//			}
+	//		}
+	//	});
 
 	//shield
 	//const auto pPxTriangleMesh = ContentManager::Load<PxTriangleMesh>(L"Meshes/Sphere.ovpt");
 	//m_pShieldMagicEmitter->GetComponent<RigidBodyComponent>()->AddCollider(PxTriangleMeshGeometry(pPxTriangleMesh, PxMeshScale({ 10.f,10.f,10.f })), *m_pDefaultMaterial);
 
+
+	//spray
+	m_pSprayDamageColliderContainer = m_pCharacter->AddChild(new GameObject());
+	m_pSprayDamageCollider = new GameObject();
+	m_pSprayDamageColliderContainer->AddChild(m_pSprayDamageCollider);
+	m_pSprayDamageCollider->GetTransform()->Translate(0, 0, 100);
+	m_pSprayDamageCollider->AddComponent(new RigidBodyComponent());
+	m_pSprayDamageCollider->GetComponent<RigidBodyComponent>()->AddCollider(PxBoxGeometry{ 20,20,100 }, * m_pDefaultMaterial);
+	m_pSprayDamageCollider->GetComponent<RigidBodyComponent>()->SetKinematic(true);
+
+	colliderInfo = m_pSprayDamageCollider->GetComponent<RigidBodyComponent>()->GetCollider(0);
+	colliderInfo.SetTrigger(true);
+
+	//m_pSprayDamageCollider->SetOnTriggerCallBack([&](GameObject* /*pTriggerObject*/, GameObject* pOtherObject, PxTriggerAction action)
+	//{
+	//	if (action == PxTriggerAction::ENTER)
+	//	{
+	//		if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
+	//			m_pEnemiesInSprayRange.push_back(enemy);
+	//		}
+	//	}
+	//	if (action == PxTriggerAction::LEAVE)
+	//	{
+	//		if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
+	//			enemy->DamageBeamExit();
+	//			m_pEnemiesInSprayRange.remove(enemy);
+	//		}
+	//	}
+	//});
 
 	m_pSprayMagicEmitter->SetVisibility(false);
 	m_pBeamMagicEmitter->SetVisibility(false);
@@ -590,21 +662,26 @@ void ExamTestClass::Update()
 		}
 	}
 
-	for (auto enemy : m_pMeleeEnemies) {
-		if (enemy->GetHealth() <= 0) {
-			m_pMeleeEnemies.erase(std::remove(m_pMeleeEnemies.begin(), m_pMeleeEnemies.end(), enemy));
-			RemoveChild(enemy);
+	if (IsChargingProjectile) {
+		if (ProjectileTimer < MaxProjectileTimer) {
+			ProjectileTimer += deltaTime;
 		}
 	}
+
+	HandleEnemies();
 }
 
-void ExamTestClass::HandleEmitterMovement(const XMFLOAT3 pos) {
+void ExamTestClass::HandleEmitterMovement(XMFLOAT3 pos) {
 	XMFLOAT3 pos2{ m_pCharacter->GetTransform()->GetForward() };
 	pos2.x *= 400 + pos.x;
 	pos2.z *= 400 + pos.z;
 	m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->UpdatePosition(pos, m_pCharacter->GetTransform()->GetRotation());
 	m_pBeamMagicEmitter->GetTransform()->Rotate(XMFLOAT3{ 0,0,0 });
-	m_pDamageCollider->GetComponent<RigidBodyComponent>()->UpdatePosition(pos, m_pCharacter->GetTransform()->GetRotation());
+	m_pSprayDamageCollider->GetComponent<RigidBodyComponent>()->UpdatePosition(XMFLOAT3{1,1,220}, m_pSprayDamageCollider->GetTransform()->GetRotation());
+	//m_pSprayDamageColliderContainer->GetTransform()->Translate(pos);
+
+	m_pPlayerDamageTakingCollider->GetComponent<RigidBodyComponent>()->UpdatePosition(pos, m_pCharacter->GetTransform()->GetRotation());
+	m_pPlayerMaxEnemyRangeCollider->GetComponent<RigidBodyComponent>()->UpdatePosition(pos, m_pCharacter->GetTransform()->GetRotation());
 }
 
 void ExamTestClass::HandleUIMovement(const XMFLOAT3 pos) {
@@ -690,6 +767,16 @@ void ExamTestClass::HandleCameraMovement()
 	pos.z += projectedPoint.z;
 	m_SceneContext.pCamera->GetTransform()->Translate(pos);
 }
+
+void ExamTestClass::HandleEnemies()
+{
+	for (auto projectile : m_pProjectileHolder->GetChildren<Projectile>()) {
+		if (projectile->IsMarkedForDelete()) {
+			//m_Projectiles.erase(std::remove(m_Projectiles.begin(), m_Projectiles.end(), projectile));
+			m_pProjectileHolder->RemoveChild(projectile);
+		}
+	}
+}
 #pragma endregion
 
 #pragma region Draw
@@ -707,106 +794,90 @@ void ExamTestClass::PostDraw()
 #pragma region Execution
 void ExamTestClass::ExecuteMagicCombo()
 {
-	//const auto spell{ std::find_if(m_MagicSpells.begin(), m_MagicSpells.end(), [&](const MagicSpell& spell) {
-	//	return spell.Pattern == m_ComboPattern;
-	//}) };
-
-	//if (spell != m_MagicSpells.end()) {
-	//	//cast the selected spell
-	//	HandlePrint2(spell->Spell);
-
-	//	//ResetCombo();
-	//}
-	//else {
 	if (!IsExecutingMagic) {
 		IsExecutingMagic = true;
-		//set up result magic
-		for (auto type : m_ComboBar) {
-			//add modifiers to the result magic
-			const auto magic{ std::find_if(MagicResult.Modifiers.begin(), MagicResult.Modifiers.end(), [&](const ElementTypes& magic) {
-				return magic == type.ElementType;
-			}) };
-			if (magic == MagicResult.Modifiers.end()) {
-				MagicResult.Modifiers.push_back(type.ElementType);
-				MagicResult.AOETextureName.push_back(type.AOETextureName);
-				MagicResult.TextureName.push_back(type.TextureName);
-			}
-		}
+		
+		FillMagicResultData();
 
-
-		////find most occuring character in the pattern
-		//const auto count = std::unordered_multiset<char>{ m_ComboPattern.begin(), m_ComboPattern.end() };
-		//const auto comparator = [count](auto a, auto b) { return count.count(a) < count.count(b); };
-		//if (!count.empty()) {
-		//	auto character{ *std::max_element(count.begin(), count.end(), comparator) };
-		//	HandlePrint(character);
-
-		//	const auto selectedMagic{ std::find_if(m_Magics.begin(), m_Magics.end(), [&](const Magic& magic) {
-		//		return magic.ElementType == static_cast<ElementTypes>(character);
-		//	}) };
-		//	if (selectedMagic != m_Magics.end()) {
-		//		m_pSprayMagicEmitter->SetVisibility(selectedMagic->DefaultMagicType.ProjectileType == ProjectileTypes::SPRAY);
-		//		m_pBeamMagicEmitter->SetVisibility(selectedMagic->DefaultMagicType.ProjectileType == ProjectileTypes::BEAM);
-		//		
-		//		//change texture
-		//		if (selectedMagic->DefaultMagicType.ProjectileType == ProjectileTypes::SPRAY) {
-		//			for (auto comp : m_pSprayMagicEmitter->GetComponents<ParticleEmitterComponent>()) {
-		//				comp->SetTexture(m_SceneContext, selectedMagic->TextureName);
-		//			}
-		//		}
-		//	}
-		//	//ResetCombo();
-		//}
-	//}
 		if (m_ComboBar.size() > 0) {
-			const auto selectedMagicShield{ std::find_if(m_ComboBar.begin(), m_ComboBar.end(), [&](const Magic& magic) {
+			const auto& selectedMagicShield{ std::find_if(m_ComboBar.begin(), m_ComboBar.end(), [&](const Magic& magic) {
 				return magic.DefaultMagicType.ProjectileType == ProjectileTypes::SHIELD;
 			}) };
-			const auto selectedMagicProjectile{ std::find_if(m_ComboBar.begin(), m_ComboBar.end(), [&](const Magic& magic) {
+			const auto& selectedMagicProjectile{ std::find_if(m_ComboBar.begin(), m_ComboBar.end(), [&](const Magic& magic) {
 				return magic.DefaultMagicType.ProjectileType == ProjectileTypes::PROJECTILE;
+			}) };			
+			const auto& selectedMagicProjectileBomb{ std::find_if(m_ComboBar.begin(), m_ComboBar.end(), [&](const Magic& magic) {
+				return magic.DefaultMagicType.ProjectileType == ProjectileTypes::PROJECTILEBOMB;
 			}) };
-			const auto selectedMagicBeam{ std::find_if(m_ComboBar.begin(), m_ComboBar.end(), [&](const Magic& magic) {
+			const auto& selectedMagicBeam{ std::find_if(m_ComboBar.begin(), m_ComboBar.end(), [&](const Magic& magic) {
 				return magic.DefaultMagicType.ProjectileType == ProjectileTypes::BEAM;
 			}) };			
-			const auto selectedMagicSpray{ std::find_if(m_ComboBar.begin(), m_ComboBar.end(), [&](const Magic& magic) {
+			const auto& selectedMagicSpray{ std::find_if(m_ComboBar.begin(), m_ComboBar.end(), [&](const Magic& magic) {
 				return magic.DefaultMagicType.ProjectileType == ProjectileTypes::SPRAY;
 			}) };
 			if (selectedMagicShield != m_ComboBar.end()) {
 				MagicResult.Damage = selectedMagicShield->DefaultMagicType.Damage;
 				MagicResult.ProjectileType = ProjectileTypes::SHIELD;
-				m_pSprayMagicEmitter->SetVisibility(false);
-				m_pAOEMagicEmitter->SetVisibility(false);
-				m_pBeamMagicEmitter->SetVisibility(false);
+				MagicResult.BaseElementType = selectedMagicShield->ElementType;
+				return;
+			}
+			else if (selectedMagicProjectileBomb != m_ComboBar.end()) {
+				MagicResult.Damage = selectedMagicProjectileBomb->DefaultMagicType.Damage;
+				MagicResult.ProjectileType = ProjectileTypes::PROJECTILEBOMB;
+				MagicResult.BaseElementType = selectedMagicProjectileBomb->ElementType;
 
+				ChargeProjectile(true);
+				return;
+				//FireProjectile(true);
 			}
 			else if (selectedMagicProjectile != m_ComboBar.end()) {
 				MagicResult.Damage = selectedMagicProjectile->DefaultMagicType.Damage;
 				MagicResult.ProjectileType = ProjectileTypes::PROJECTILE;
-				m_pSprayMagicEmitter->SetVisibility(false);
-				m_pAOEMagicEmitter->SetVisibility(false);
-				m_pBeamMagicEmitter->SetVisibility(false);
+				MagicResult.BaseElementType = selectedMagicProjectile->ElementType;
 
+				ChargeProjectile(true);
+				return;
+				//FireProjectile();
 			}
 			else if (selectedMagicBeam != m_ComboBar.end()) {
 				MagicResult.Damage = selectedMagicBeam->DefaultMagicType.Damage;
 				MagicResult.ProjectileType = ProjectileTypes::BEAM;
-				m_pSprayMagicEmitter->SetVisibility(false);
-				m_pAOEMagicEmitter->SetVisibility(false);
+				MagicResult.BaseElementType = selectedMagicBeam->ElementType;
 				m_pBeamMagicEmitter->SetVisibility(true);
-
+				return;
 			}
 			else {
 				MagicResult.Damage = selectedMagicSpray->DefaultMagicType.Damage;
 				MagicResult.ProjectileType = ProjectileTypes::SPRAY;
+				MagicResult.BaseElementType = selectedMagicSpray->ElementType;
 				m_pSprayMagicEmitter->SetVisibility(true);
-				m_pBeamMagicEmitter->SetVisibility(false);
-				m_pAOEMagicEmitter->SetVisibility(false);
 				for (auto comp : m_pSprayMagicEmitter->GetComponents<ParticleEmitterComponent>()) {
-					comp->SetTexture(m_SceneContext, MagicResult.TextureName[0]);
+					auto it = MagicResult.TextureName.begin(); // Iterator to the beginning of the set
+					std::advance(it, 0);
+					comp->SetTexture(m_SceneContext, *it);
+				}
+			}
+
+		}
+	}
+
+	if (MagicResult.Modifiers.size() > 0 && m_ComboBar.size() > 0 && !IsChargingProjectile && MagicResult.ProjectileType == ProjectileTypes::SPRAY) {
+		m_pSprayDamageCollider->GetComponent<RigidBodyComponent>()->SetEnableCollision(true);
+
+		for (auto enemy : m_pSprayDamageCollider->GetEnemiesInRange()) {
+			if (auto melee{ dynamic_cast<EnemyMeleeCharacter*>(enemy) }) {
+				if (!melee->GetCanDamage()) {
+					melee->DamageBeamEnter(MagicResult.Damage);
+				}
+			}
+			if (auto ranged{ dynamic_cast<ExamRangedCharacter*>(enemy) }) {
+				if (!ranged->GetCanDamage()) {
+					ranged->DamageBeamEnter(MagicResult.Damage);
 				}
 			}
 		}
 	}
+
 }
 
 void ExamTestClass::ExecuteAOE()
@@ -816,19 +887,9 @@ void ExamTestClass::ExecuteAOE()
 		auto components{ m_pAOEMagicEmitter->GetComponents<ParticleEmitterComponent>() };
 		MagicResult.ProjectileType = ProjectileTypes::AOE;
 
-		for (size_t i = 0; i < m_ComboBar.size(); i++)
-		{
-			auto type{ m_ComboBar[i] };
-			//add modifiers to the result magic
-			const auto magic{ std::find_if(MagicResult.Modifiers.begin(), MagicResult.Modifiers.end(), [&](const ElementTypes& magic) {
-				return magic == type.ElementType;
-			}) };
-			if (magic == MagicResult.Modifiers.end()) {
-				MagicResult.Modifiers.push_back(type.ElementType);
-			}
-		}
+		FillMagicResultData();
 
-		////find most occuring character in the pattern
+		//find most occuring character in the pattern
 		const auto count = std::unordered_multiset<char>{ m_ComboPattern.begin(), m_ComboPattern.end() };
 		const auto comparator = [count](auto a, auto b) { return count.count(a) < count.count(b); };
 		if (!count.empty()) {
@@ -838,18 +899,23 @@ void ExamTestClass::ExecuteAOE()
 			}) };
 			if (selectedMagic != m_Magics.end()) {
 				MagicResult.Damage = selectedMagic->DefaultMagicType.AoEDamage;
+				MagicResult.BaseElementType = selectedMagic->ElementType;
 			}
 		}
 
 		if (MagicResult.Modifiers.size() > 0 && m_ComboBar.size() > 0) {
 			m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->SetEnableCollision(true);
 			m_pAOEMagicEmitter->SetVisibility(true);
-			m_pSprayMagicEmitter->SetVisibility(false);
-			m_pBeamMagicEmitter->SetVisibility(false);
 			AoeFired = true;
-			for (auto enemy : m_pEnemiesInRange) {
-				enemy->SetCanDamage(true);
-				enemy->DamageAOE(MagicResult);
+			for (auto enemy : m_pAOEMagicEmitter->GetEnemiesInRange()) {
+				if (auto melee{ dynamic_cast<EnemyMeleeCharacter*>(enemy) }) {
+					melee->SetCanDamageAoE(true);
+					melee->DamageAOE(MagicResult.Damage);
+				}
+				if (auto ranged{ dynamic_cast<ExamRangedCharacter*>(enemy) }) {
+					ranged->SetCanDamageAoE(true);
+					ranged->DamageAOE(MagicResult.Damage);
+				}
 			}
 		}
 	}
@@ -878,6 +944,39 @@ void ExamTestClass::ExecuteSword()
 	}
 }
 
+void ExamTestClass::FireProjectile(bool /*isBomb*/)
+{
+	if (IsChargingProjectile) {
+		IsChargingProjectile = false;
+		//add damage the more the projectile is charged
+		MagicResult.Damage *= ProjectileTimer;
+		auto trans{ m_pCharacter->GetTransform() };
+		float force{ ProjectileTimer * 3.5f };
+		float downForce{ 1 };
+		
+		//increase downwards velocity based on how slow the projectile is
+		int timerToInt{ (int)ProjectileTimer };
+		if (timerToInt == 3) {
+			downForce = 1.4f;
+		}
+		else if (timerToInt == 4) {
+			downForce = 1.1f;
+		}
+		else if (timerToInt == 5) {
+			downForce = 0.8f;
+		}
+		else {
+			downForce += ProjectileTimer;
+		}
+
+		float launchSpeed{ 100 };
+		launchSpeed += launchSpeed * force;
+		auto go{ new Projectile(L"Meshes/Rock.ovm", trans->GetForward(), trans->GetWorldPosition(), launchSpeed, downForce, m_pMaterial, m_pDefaultMaterial, IsBombProjectile) };
+		m_pProjectileHolder->AddChild(go);
+		go->SetDamageToGive(MagicResult.Damage);
+	}
+}
+
 void ExamTestClass::ResetCombo()
 {
 	m_ComboPattern = "";
@@ -892,15 +991,17 @@ void ExamTestClass::ResetCombo()
 	MagicResult.AOETextureName.clear();
 	IsExecutingMagic = false;
 
+	ProjectileTimer = 0;
+
 	AoeFired = false;
 	AoeTimer = 2;
 
-	
 	for (auto go : m_pUI3->GetChildren<GameObject>()) {
 		go->GetComponent<SpriteComponent>()->SetTexture(L"Textures/Magicka/Element_none.png");
 	}
 
 	m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->SetEnableCollision(false);
+	m_pSprayDamageCollider->GetComponent<RigidBodyComponent>()->SetEnableCollision(false);
 }
 #pragma endregion
 
@@ -947,6 +1048,33 @@ bool ExamTestClass::IsMagicCancelled(int currentIterator, const Magic* currentMa
 		}
 	}
 	return false;
+}
+
+void ExamTestClass::FillMagicResultData()
+{
+	//set up result magic
+	for (const auto& type : m_ComboBar) {
+		//add modifiers to the result magic
+		const auto magic{ std::find_if(MagicResult.Modifiers.begin(), MagicResult.Modifiers.end(), [&](const ElementTypes& magic) {
+			return magic == type.ElementType;
+		}) };
+
+		//push back only 1 of the elements
+		MagicResult.Modifiers.insert(type.ElementType);
+		MagicResult.AOETextureName.insert(type.AOETextureName);
+		MagicResult.TextureName.insert(type.TextureName);
+
+		//add the damage from the extra element once
+		if (magic == MagicResult.Modifiers.end()) {
+			//adds damage from extra elements
+			MagicResult.Damage += type.DefaultMagicType.AddedDamage;
+		}
+	}
+}
+void ExamTestClass::ChargeProjectile(bool isBomb)
+{
+	IsChargingProjectile = true;
+	IsBombProjectile = isBomb;
 }
 #pragma endregion
 

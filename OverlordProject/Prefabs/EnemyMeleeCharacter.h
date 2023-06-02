@@ -14,12 +14,14 @@ public:
 	EnemyMeleeCharacter& operator=(EnemyMeleeCharacter&& other) noexcept = delete;
 
 	void DrawImGui();
-	void DamageBeamEnter(ResultingMagic MagicResult);
-	void DamageBeamExit(ResultingMagic MagicResult);
-	void DamageAOE(ResultingMagic MagicResult);
+	void DamageBeamEnter(float damage);
+	void DamageBeamExit();
+	void DamageAOE(float damage);
+	void DamageAOE(float damage, bool canDamage);
 
 	float GetHealth() { return m_Health; };
-	void SetCanDamage(bool canDamage) { CanDamageAoE = canDamage; };
+	void SetCanDamageAoE(bool canDamage) { CanDamageAoE = canDamage; };
+	bool GetCanDamage() { return CanDamage; };
 	void SetCanMove(bool canMove) { CanMove = canMove; };
 	float GetAttackDamage() { return m_AttackDamage; };
 

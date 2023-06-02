@@ -1,6 +1,6 @@
 #pragma once
 #include <functional>
-
+#include <list>
 enum class PxTriggerAction
 {
 	ENTER,
@@ -36,7 +36,7 @@ public:
 		return pComp;
 	}
 	void RemoveComponent(BaseComponent* pComponent, bool deleteObject = false);
-	void OnTrigger(GameObject* pTriggerObject, GameObject* pOtherObject, PxTriggerAction action) const;
+	void OnTrigger(GameObject* pTriggerObject, GameObject* pOtherObject, PxTriggerAction action);
 
 	const std::wstring& GetTag() const { return m_Tag; }
 	void SetTag(const std::wstring& tag) { m_Tag = tag; }
@@ -48,6 +48,9 @@ public:
 
 	void SetOnTriggerCallBack(PhysicsCallback callback);
 	void SetVisibility(bool isVisible) { IsVisible = isVisible; };
+
+	std::list<GameObject*> GetObjectsInRange() { return m_OtherObjectsInRange; };
+	std::list<GameObject*> GetEnemiesInRange() { return m_EnemiesInRange; };
 
 #pragma region
 	template <class T>
@@ -104,6 +107,7 @@ public:
 		return components;
 	}
 
+
 	template <class T>
 	T* GetChild()
 	{
@@ -128,6 +132,19 @@ public:
 				children.push_back(static_cast<T*>(child));
 		}
 		return children;
+	}
+
+	template <class T>
+	T* GetCharacterInRange()
+	{
+		const type_info& ti = typeid(T);
+		for (auto* object : m_OtherObjectsInRange)
+		{
+			if (object && typeid(*object) == ti)
+				return static_cast<T*>(object);
+		}
+
+		return nullptr;
 	}
 #pragma endregion Template Methods
 
@@ -167,4 +184,8 @@ private:
 	PhysicsCallback m_OnTriggerCallback{};
 	std::wstring m_Tag{};
 	bool IsVisible{ true };
+
+	std::list<GameObject*> m_EnemiesInRange{};
+	std::list<GameObject*> m_OtherObjectsInRange{ };
+
 };

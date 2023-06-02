@@ -36,7 +36,7 @@ void ExamCharacter::Update(const SceneContext& sceneContext)
 
 	HandleMove(sceneContext, newRot, epsilon);
 
-	if (CanDamage) {
+	if (CanTakeDamage) {
 		DamageTimer -= deltaTime;
 		if (DamageTimer <= 0) {
 			m_Health -= DamageToTake;
@@ -171,6 +171,7 @@ void ExamCharacter::HandleInput(const SceneContext& sceneContext, bool& shiftPre
 		}
 		if (sceneContext.pInput->IsMouseButton(InputState::released, 2)) {
 			ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
+			scene->FireProjectile();
 			scene->ResetCombo();
 		}
 	}
@@ -233,10 +234,10 @@ void ExamCharacter::DrawImGui()
 	}
 }
 
-void ExamCharacter::DamagePlayer(bool canDamage, float damage)
+void ExamCharacter::DamagePlayer(bool canTakeDamage, float damage)
 {
-	CanDamage = canDamage;
-	if (CanDamage) {
+	CanTakeDamage = canTakeDamage;
+	if (CanTakeDamage) {
 		DamageToTake += damage;
 	}
 	else {

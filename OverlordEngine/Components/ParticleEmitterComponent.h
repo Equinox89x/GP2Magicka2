@@ -47,6 +47,7 @@ public:
 	ParticleEmitterSettings& GetSettings() { return m_EmitterSettings; }; //EmitterSettings Getter (by reference) > allows settings changes
 	void DrawImGui();
 	void SetTexture(const SceneContext& sceneContext, const std::wstring& assetFile);
+	void SetShouldIncreaseOverTime(bool shouldIncrease) { m_ShouldIncrease = shouldIncrease; };
 
 protected:
 	void Initialize(const SceneContext&) override;
@@ -71,6 +72,6 @@ private:
 	float m_LastParticleSpawn{}; //Total seconds since the last created particle
 	std::wstring m_AssetFile{};
 
-	bool m_DrawImGui{ false };
+	bool m_DrawImGui{ false }, m_ShouldIncrease{ false };
 };
 

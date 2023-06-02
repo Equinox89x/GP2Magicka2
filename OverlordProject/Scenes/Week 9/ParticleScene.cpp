@@ -23,7 +23,7 @@ void ParticleScene::Initialize()
 
 	const auto pObject = AddChild(new GameObject);
 	m_pEmitter = pObject->AddComponent(new ParticleEmitterComponent(L"Textures/Smoke.png", settings, 200));
-
+	m_pEmitter->SetShouldIncreaseOverTime(true);
 	//Teapot
 	m_pTeapot = AddChild(new GameObject());
 	const auto pModel = m_pTeapot->AddComponent(new ModelComponent(L"Meshes/Teapot.ovm"));

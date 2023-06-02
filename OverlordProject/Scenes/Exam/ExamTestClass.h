@@ -5,10 +5,13 @@
 #include "Prefabs/SpherePrefab.h"
 #include "Prefabs/CubePrefab.h"
 #include "Prefabs/TorusPrefab.h"
+#include "Prefabs/Projectile.h"
 #include <list>
+#include <set>
 
 
 class ExamCharacter;
+class ExamRangedCharacter;
 class EnemyMeleeCharacter;
 
 #pragma region enums & structs
@@ -66,19 +69,21 @@ enum class SolidType {
 };
 
 struct ResultingMagic {
+	ElementTypes BaseElementType;
 	ProjectileTypes ProjectileType;
 	SolidType SolidType;
-	std::vector<ElementTypes> Modifiers;
-	std::vector<std::wstring> TextureName;
-	std::vector<std::wstring> AOETextureName;
+	std::set<ElementTypes> Modifiers;
+	std::set<std::wstring> TextureName;
+	std::set<std::wstring> AOETextureName;
 	float Damage;
 };
 
 struct MagicTypes {
-	MagicTypes(ElementTypes baseType, ProjectileTypes MagicType, float Damage) :
+	MagicTypes(ElementTypes baseType, ProjectileTypes magicType, float damage, float addedDamage) :
 		BaseType{ baseType },
-		ProjectileType{ MagicType },
-		Damage{ Damage }
+		ProjectileType{ magicType },
+		Damage{ damage },
+		AddedDamage{ addedDamage }
 	{
 		AoEDamage = Damage * 2;
 	}
@@ -87,6 +92,7 @@ struct MagicTypes {
 	ElementTypes BaseType{};
 	float Damage{ 0 };
 	float AoEDamage{ 0 };
+	float AddedDamage{ 0 };
 };
 
 struct MagicSpell {
@@ -130,7 +136,7 @@ struct Magic {
 	std::vector<ElementTypes> CombiningMagicTypes{ };
 	std::vector<ElementTypes> CancellingMagicTypes{ };
 	std::vector<MagicTypes> MagicType{ };
-	MagicTypes DefaultMagicType{ MagicTypes{ElementTypes::NONE, ProjectileTypes::BEAM, 0} };
+	MagicTypes DefaultMagicType{ MagicTypes{ElementTypes::NONE, ProjectileTypes::BEAM, 0, 0} };
 
 	void AssignName() {
 		TextureName = L"Textures/";
@@ -215,6 +221,7 @@ public:
 	void ExecuteAOE();
 	void ExecuteSelfCast();
 	void ExecuteSword();
+	void FireProjectile(bool isBomb = false);
 
 
 protected:
@@ -225,7 +232,7 @@ protected:
 	void HandleMagicTransform();
 	void HandleCameraMovement();
 	void HandleUIMovement(const XMFLOAT3 pos);
-	void HandleEmitterMovement(const XMFLOAT3 pos);
+	void HandleEmitterMovement(XMFLOAT3 pos);
 	void Draw() override;
 	void PostDraw() override;
 
@@ -236,7 +243,7 @@ private:
 	XMFLOAT3 m_Size{ 10,10, 10 };
 	ExamCharacter* m_pCharacter{};
 	std::vector<EnemyMeleeCharacter*> m_pMeleeEnemies{ };
-	std::list<EnemyMeleeCharacter*> m_pEnemiesInRange{ };
+	std::vector<ExamRangedCharacter*> m_pRangedEnemies{ };
 	GameObject* m_pSprayMagicEmitter{};
 	GameObject* m_pBeamMagicEmitter{ nullptr };
 	GameObject* m_pBeamMagicEmitterContainer{ nullptr };
@@ -246,12 +253,17 @@ private:
 	GameObject* m_pUI{ nullptr };
 	GameObject* m_pUI2{ nullptr };
 	GameObject* m_pUI3{ nullptr };
-	GameObject* m_pDamageCollider{ nullptr };
+	GameObject* m_pPlayerDamageTakingCollider{ nullptr };
+	GameObject* m_pPlayerMaxEnemyRangeCollider{ nullptr };
+	GameObject* m_pSprayDamageCollider{ nullptr };
+	GameObject* m_pSprayDamageColliderContainer{ nullptr };
+	GameObject* m_pProjectileHolder{ nullptr };
 	DiffuseMaterial* m_pMaterial{};
 	DiffuseMaterial* m_pLevelMaterial{};
 	std::vector<std::wstring> m_Textures{};
 	std::vector<std::wstring> m_TransparentTextures{};
 	ResultingMagic MagicResult{};
+	std::vector<Projectile*> m_Projectiles;
 
 	//Magic information
 	//Water must always be FIRST in the vector of combined magics
@@ -270,9 +282,9 @@ private:
 	MagickaCamera* m_pCamera{};
 	int currentLineIndex{ 0 };
 	bool CanIncrease{ true };
-	bool IsExecutingMagic{ false };
+	bool IsExecutingMagic{ false }, IsChargingProjectile{ false }, IsBombProjectile;
 	bool AoeFired{ false };
-	float AoeTimer{ 2 };
+	float AoeTimer{ 2 }, ProjectileTimer{ 0 }, MaxProjectileTimer{ 5 };
 
 	//input
 	enum InputIds
@@ -309,6 +321,10 @@ private:
 	//magic helper functions
 	Magic* GetCombinedMagicType(ElementTypes elementType1, ElementTypes elementType2);
 	bool IsMagicCancelled(int currentIterator, const Magic* currentMagic, bool& foundCanceller);
+	void FillMagicResultData();
+
+	void ChargeProjectile(bool isBomb = false);
+	void HandleEnemies();
 
 	//debug
 	void HandlePrint(const ElementTypes currentMagic) const;

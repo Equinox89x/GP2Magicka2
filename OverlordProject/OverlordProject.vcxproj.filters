@@ -40,6 +40,8 @@
     <ClCompile Include="Materials\BasicMaterial_Deferred.cpp" />
     <ClCompile Include="Scenes\Week 11\DeferredRenderingScene.cpp" />
     <ClCompile Include="Prefabs\EnemyMeleeCharacter.cpp" />
+    <ClCompile Include="Prefabs\ExamRangedCharacter.cpp" />
+    <ClCompile Include="Prefabs\Projectile.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MainGame.h" />
@@ -80,18 +82,7 @@
     <ClInclude Include="Materials\BasicMaterial_Deferred.h" />
     <ClInclude Include="Scenes\Week 11\DeferredRenderingScene.h" />
     <ClInclude Include="Prefabs\EnemyMeleeCharacter.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="..\..\..\..\..\..\Users\bramr\Downloads\Element_poison.png" />
-    <Image Include="..\..\..\..\..\..\Users\bramr\Downloads\Element_life.png" />
-    <Image Include="..\..\..\..\..\..\Users\bramr\Downloads\Element_ice.png" />
-    <Image Include="..\..\..\..\..\..\Users\bramr\Downloads\Element_fire.png" />
-    <Image Include="..\..\..\..\..\..\Users\bramr\Downloads\Element_earth.png" />
-    <Image Include="..\..\..\..\..\..\Users\bramr\Downloads\Element_cold.png" />
-    <Image Include="..\..\..\..\..\..\Users\bramr\Downloads\Element_arcane.png" />
-    <Image Include="..\..\..\..\..\..\Users\bramr\Downloads\Element_water.png" />
-    <Image Include="..\..\..\..\..\..\Users\bramr\Downloads\Element_steam.png" />
-    <Image Include="..\..\..\..\..\..\Users\bramr\Downloads\Element_shield.png" />
-    <Image Include="..\..\..\..\..\..\Users\bramr\Downloads\Element_lightning.png" />
+    <ClInclude Include="Prefabs\ExamRangedCharacter.h" />
+    <ClInclude Include="Prefabs\Projectile.h" />
   </ItemGroup>
 </Project>

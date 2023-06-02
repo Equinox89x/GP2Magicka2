@@ -103,8 +103,10 @@ void ParticleEmitterComponent::UpdateParticle(Particle& p, float elapsedTime) co
 	float lifePercentage{ p.currentEnergy / p.totalEnergy };
 	p.vertexInfo.Color = m_EmitterSettings.color;
 	p.vertexInfo.Color.w *= lifePercentage;
+	if (!m_ShouldIncrease) lifePercentage = 1 - lifePercentage;
 
-	p.vertexInfo.Size = (p.initialSize - p.sizeChange) * lifePercentage + p.sizeChange;
+	float sizeDifference{ p.initialSize - p.sizeChange };
+	p.vertexInfo.Size = sizeDifference * lifePercentage + p.sizeChange;
 }
 
 void ParticleEmitterComponent::SpawnParticle(Particle& p)

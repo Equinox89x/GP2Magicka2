@@ -1,6 +1,9 @@
 #include "stdafx.h"
 #include "GameObject.h"
 #include <algorithm>
+#include "../../OverlordProject/Prefabs/EnemyMeleeCharacter.h"
+#include "../../OverlordProject/Prefabs/ExamRangedCharacter.h"
+#include "../../OverlordProject/Prefabs/ExamCharacter.h"
 
 GameObject::GameObject():
 	m_IsActive(true),
@@ -315,10 +318,38 @@ void GameObject::RemoveComponent(BaseComponent* pComponent, bool deleteObject)
 	}
 }
 
-void GameObject::OnTrigger(GameObject* pTriggerObject, GameObject* pOtherObject, PxTriggerAction action) const
+void GameObject::OnTrigger(GameObject* pTriggerObject, GameObject* pOtherObject, PxTriggerAction action)
 {
-	if(m_OnTriggerCallback)
+	if (action == PxTriggerAction::ENTER)
+	{
+
+		if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
+			m_EnemiesInRange.push_back(enemy);
+		}
+		if (auto enemy2{ dynamic_cast<ExamRangedCharacter*>(pOtherObject) }) {
+			m_EnemiesInRange.push_back(enemy2);
+		}
+		if (auto enemy3{ dynamic_cast<ExamCharacter*>(pOtherObject) }) {
+			m_OtherObjectsInRange.push_back(enemy3);
+		}
+
+	}
+	if (action == PxTriggerAction::LEAVE)
+	{
+		if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
+			m_EnemiesInRange.remove(enemy);
+		}
+		if (auto enemy2{ dynamic_cast<ExamRangedCharacter*>(pOtherObject) }) {
+			m_EnemiesInRange.remove(enemy2);
+		}
+		if (auto enemy3{ dynamic_cast<ExamCharacter*>(pOtherObject) }) {
+			m_OtherObjectsInRange.remove(enemy3);
+		}
+	}
+
+	if (m_OnTriggerCallback) {
 		m_OnTriggerCallback(pTriggerObject, pOtherObject, action);
+	}
 }
 
 GameScene* GameObject::GetScene() const

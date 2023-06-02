@@ -1,6 +1,4 @@
 #pragma once
-#include <Scenes/Exam/ExamTestClass.h>
-
 struct CharacterDescExtended
 {
 	CharacterDescExtended(
@@ -63,7 +61,7 @@ public:
 
 	void DrawImGui();
 
-	void DamagePlayer(bool canDamage, float damage);
+	void DamagePlayer(bool canTakeDamage, float damage);
 
 protected:
 	void Initialize(const SceneContext&) override;
@@ -79,7 +77,7 @@ protected:
 
 private:
 	ControllerComponent* m_pControllerComponent{};
-	ExamTestClass* Scene{ nullptr };
+	//GameScene* Scene{ nullptr };
 	CharacterDescExtended m_CharacterDescExtended;
 	float m_TotalPitch{}, m_TotalYaw{};				//Total camera Pitch(X) and Yaw(Y) rotation
 	float m_MoveAcceleration{},						//Acceleration required to reach maxMoveVelocity after 1 second (maxMoveVelocity / moveAccelerationTime)
@@ -88,7 +86,7 @@ private:
 
 	XMFLOAT3 m_TotalVelocity{};						//TotalVelocity with X/Z for Horizontal Movement AND Y for Vertical Movement (fall/jump)
 	XMFLOAT3 m_CurrentDirection{};					//Current/Last Direction based on Camera forward/right (Stored for deacceleration)
-	bool WasPressed{ false }, CanDamage{ true };
+	bool WasPressed{ false }, CanTakeDamage{ false };
 	float m_Health{ 3000 };
 	float DamageToTake{ 0 }, DamageTimer{ 1 };
 };
