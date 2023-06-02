@@ -42,6 +42,7 @@
     <ClCompile Include="Prefabs\EnemyMeleeCharacter.cpp" />
     <ClCompile Include="Prefabs\ExamRangedCharacter.cpp" />
     <ClCompile Include="Prefabs\Projectile.cpp" />
+    <ClCompile Include="Prefabs\ExamEnemy.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MainGame.h" />
@@ -84,5 +85,6 @@
     <ClInclude Include="Prefabs\EnemyMeleeCharacter.h" />
     <ClInclude Include="Prefabs\ExamRangedCharacter.h" />
     <ClInclude Include="Prefabs\Projectile.h" />
+    <ClInclude Include="Prefabs\ExamEnemy.h" />
   </ItemGroup>
 </Project>

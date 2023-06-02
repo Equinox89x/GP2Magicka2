@@ -17,7 +17,7 @@ Projectile::Projectile(std::wstring assetFile, XMFLOAT3 forwardVector, XMFLOAT3 
 
 void Projectile::Initialize(const SceneContext&)
 {
-	AddChild(new GameObject());
+	//AddChild(new GameObject());
 	AddComponent(new ModelComponent(m_AssetFile));
 	GetComponent<ModelComponent>()->SetMaterial(m_pMaterial);
 	m_InitialPosition.z += m_ForwardVector.z * 40;
@@ -29,7 +29,6 @@ void Projectile::Initialize(const SceneContext&)
 	comp->SetKinematic(false);
 	comp->AddCollider(PxSphereGeometry{ 15 }, *m_pColliderMaterial);
 	comp->AddForce(m_ForwardVector);
-	//comp->AddTorque(m_ForwardVector);
 
 	auto colliderInfo = comp->GetCollider(0);
 	colliderInfo.SetTrigger(true);
@@ -37,11 +36,8 @@ void Projectile::Initialize(const SceneContext&)
 	{
 		if (action == PxTriggerAction::ENTER)
 		{
-			if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
-				enemy->DamageAOE(m_DamageToGive);
-			}
-			if (auto enemy2{ dynamic_cast<ExamRangedCharacter*>(pOtherObject) }) {
-				enemy2->DamageAOE(m_DamageToGive);
+			if (auto enemy{ dynamic_cast<ExamEnemy*>(pOtherObject) }) {
+				enemy->DamageAOE(m_DamageToGive, true);
 			}
 			if (m_IsBomb) { Explode(); }
 			else{
@@ -60,31 +56,6 @@ void Projectile::Initialize(const SceneContext&)
 		comp2->AddCollider(PxSphereGeometry{ 50 }, *m_pColliderMaterial);
 		auto colliderInfo2 = comp2->GetCollider(0);
 		colliderInfo2.SetTrigger(true);
-
-		//m_Collider->SetOnTriggerCallBack([&](GameObject* /*pTriggerObject*/, GameObject* pOtherObject, PxTriggerAction action)
-		//{
-		//	if (action == PxTriggerAction::ENTER)
-		//	{
-		//		
-		//			if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
-		//				m_CharactersInRange.push_back(enemy);
-		//			}
-		//			if (auto enemy2{ dynamic_cast<ExamRangedCharacter*>(pOtherObject) }) {
-		//				m_CharactersInRange.push_back(enemy2);
-		//			}
-		//		
-		//	}
-		//	if (action == PxTriggerAction::LEAVE)
-		//	{
-		//			if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
-		//				m_CharactersInRange.remove(enemy);
-		//			}
-		//			if (auto enemy2{ dynamic_cast<ExamRangedCharacter*>(pOtherObject) }) {
-		//				m_CharactersInRange.remove(enemy2);
-		//			}
-		//		
-		//	}
-		//});
 	}
 }
 
@@ -137,8 +108,7 @@ void Projectile::Explode()
 
 	for (auto character : m_Collider->GetEnemiesInRange())
 	{
-		if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(character) }) enemy->DamageAOE(m_DamageToGive, true);
-		if (auto enemy2{ dynamic_cast<ExamRangedCharacter*>(character) }) enemy2->DamageAOE(m_DamageToGive, true);
+		if (auto enemy{ dynamic_cast<ExamEnemy*>(character) }) enemy->DamageAOE(m_DamageToGive, true);
 	}
 	if (auto character{ m_Collider->GetCharacterInRange<ExamCharacter>() })	character->DamagePlayer(true, m_DamageToGive);
 

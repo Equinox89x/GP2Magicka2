@@ -42,6 +42,8 @@ void ExamTestClass::Initialize()
 	CreateUI();
 
 	m_pProjectileHolder = AddChild(new GameObject());
+
+	ResetCombo();
 }
 
 void ExamTestClass::SetStartPos()
@@ -217,12 +219,13 @@ void ExamTestClass::CreateDamager() {
 void ExamTestClass::CreateEnemies() {
 	CharacterDescExtended enemyDesc{ m_Material };
 	enemyDesc.maxMoveSpeed = 55;
+	m_pEnemyHolder = AddChild(new GameObject());
 
 	float width{ 50 };
 	for (size_t i = 0; i < 5; i++)
 	{
 		EnemyMeleeCharacter* enemy = new EnemyMeleeCharacter(enemyDesc, XMFLOAT3{ width, 5.f, -100 });
-		AddChild(enemy);
+		m_pEnemyHolder->AddChild(enemy);
 		enemy->AddComponent(new ModelComponent(L"Meshes/wizard.ovm"));
 		enemy->GetComponent<ModelComponent>()->SetMaterial(m_pMaterial);
 
@@ -238,20 +241,14 @@ void ExamTestClass::CreateEnemies() {
 		{
 			if (action == PxTriggerAction::ENTER)
 			{
-				if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
+				if (auto enemy{ dynamic_cast<ExamEnemy*>(pOtherObject) }) {
 					enemy->SetCanMove(false);
-				}	
-				if (auto enemy2{ dynamic_cast<ExamRangedCharacter*>(pOtherObject) }) {
-					enemy2->SetCanMove(false);
 				}
 			}
 			if (action == PxTriggerAction::LEAVE)
 			{
-				if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
+				if (auto enemy{ dynamic_cast<ExamEnemy*>(pOtherObject) }) {
 					enemy->SetCanMove(true);
-				}
-				if (auto enemy2{ dynamic_cast<ExamRangedCharacter*>(pOtherObject) }) {
-					enemy2->SetCanMove(true);
 				}
 			}
 		});
@@ -269,7 +266,7 @@ void ExamTestClass::CreateEnemies() {
 	for (size_t i = 0; i < 5; i++)
 	{
 		ExamRangedCharacter* enemy = new ExamRangedCharacter(enemyRangedDesc, XMFLOAT3{ width, 5.f, -150 });
-		AddChild(enemy);
+		m_pEnemyHolder->AddChild(enemy);
 		enemy->AddComponent(new ModelComponent(L"Meshes/wizard.ovm"));
 		enemy->GetComponent<ModelComponent>()->SetMaterial(m_pMaterial);
 
@@ -443,28 +440,20 @@ void ExamTestClass::CreateEmitters()
 		{
 			if (action == PxTriggerAction::ENTER)
 			{
-				if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
+				if (auto enemy{ dynamic_cast<ExamEnemy*>(pOtherObject) }) {
 					enemy->DamageBeamEnter(MagicResult.Damage);
-				}
-				if (auto enemy2{ dynamic_cast<ExamRangedCharacter*>(pOtherObject) }) {
-					enemy2->DamageBeamEnter(MagicResult.Damage);
 				}
 			}
 			if (action == PxTriggerAction::LEAVE)
 			{
-				if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
+				if (auto enemy{ dynamic_cast<ExamEnemy*>(pOtherObject) }) {
 					enemy->DamageBeamExit();
-				}
-				if (auto enemy2{ dynamic_cast<ExamRangedCharacter*>(pOtherObject) }) {
-					enemy2->DamageBeamExit();
 				}
 			}
 		});
 
 	//aoe
 	m_pAOEMagicEmitter = AddChild(new TorusPrefab(50.f, 50, 20.f, 50, XMFLOAT4{1,0,0,1}));
-	//m_pAOEMagicEmitter = new TorusPrefab(50.f, 50, 20.f, 50, XMFLOAT4{1,0,0,1});
-	//m_pCharacter->AddChild(m_pAOEMagicEmitter);
 	m_pAOEMagicEmitter->AddComponent(component);
 	m_pAOEMagicEmitter->GetTransform()->Rotate(90, 0, 0);
 
@@ -474,23 +463,6 @@ void ExamTestClass::CreateEmitters()
 
 	colliderInfo = m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->GetCollider(0);
 	colliderInfo.SetTrigger(true);
-
-	//m_pAOEMagicEmitter->SetOnTriggerCallBack([&](GameObject* /*pTriggerObject*/, GameObject* pOtherObject, PxTriggerAction action)
-	//	{
-	//		if (action == PxTriggerAction::ENTER)
-	//		{
-	//			if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
-	//				m_pEnemiesInAoERange.push_back(enemy);
-	//			}
-	//		}
-	//		if (action == PxTriggerAction::LEAVE)
-	//		{
-	//			if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
-
-	//				m_pEnemiesInAoERange.remove(enemy);
-	//			}
-	//		}
-	//	});
 
 	//shield
 	//const auto pPxTriangleMesh = ContentManager::Load<PxTriangleMesh>(L"Meshes/Sphere.ovpt");
@@ -509,22 +481,15 @@ void ExamTestClass::CreateEmitters()
 	colliderInfo = m_pSprayDamageCollider->GetComponent<RigidBodyComponent>()->GetCollider(0);
 	colliderInfo.SetTrigger(true);
 
-	//m_pSprayDamageCollider->SetOnTriggerCallBack([&](GameObject* /*pTriggerObject*/, GameObject* pOtherObject, PxTriggerAction action)
-	//{
-	//	if (action == PxTriggerAction::ENTER)
-	//	{
-	//		if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
-	//			m_pEnemiesInSprayRange.push_back(enemy);
-	//		}
-	//	}
-	//	if (action == PxTriggerAction::LEAVE)
-	//	{
-	//		if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
-	//			enemy->DamageBeamExit();
-	//			m_pEnemiesInSprayRange.remove(enemy);
-	//		}
-	//	}
-	//});
+	m_pSprayDamageCollider->SetOnTriggerCallBack([&](GameObject* /*pTriggerObject*/, GameObject* pOtherObject, PxTriggerAction action)
+	{
+		if (action == PxTriggerAction::LEAVE)
+		{
+			if (auto enemy{ dynamic_cast<ExamEnemy*>(pOtherObject) }) {
+				enemy->DamageBeamExit();
+			}
+		}
+	});
 
 	m_pSprayMagicEmitter->SetVisibility(false);
 	m_pBeamMagicEmitter->SetVisibility(false);
@@ -644,7 +609,6 @@ void ExamTestClass::OnGUI()
 #pragma region Update
 void ExamTestClass::Update()
 {
-	float deltaTime = m_SceneContext.pGameTime->GetElapsed();
 	XMFLOAT3 pos2{ m_pCharacter->GetTransform()->GetWorldPosition()};
 
 	HandleEmitterMovement(pos2);
@@ -654,6 +618,14 @@ void ExamTestClass::Update()
 	HandleCameraMovement();
 
 	HandleMagicTransform();
+
+	HandleTimers();
+
+	HandleEnemies();
+}
+
+void ExamTestClass::HandleTimers() {
+	float deltaTime = m_SceneContext.pGameTime->GetElapsed();
 
 	if (AoeFired) {
 		AoeTimer -= deltaTime;
@@ -668,7 +640,13 @@ void ExamTestClass::Update()
 		}
 	}
 
-	HandleEnemies();
+	if (IsShootingIceProjectile) {
+		ProjectileTimer -= deltaTime;
+		if (ProjectileTimer <= 0) {
+			FireProjectileBarage();
+			ProjectileTimer = MaxIceProjectileTimer;
+		}
+	}
 }
 
 void ExamTestClass::HandleEmitterMovement(XMFLOAT3 pos) {
@@ -772,8 +750,18 @@ void ExamTestClass::HandleEnemies()
 {
 	for (auto projectile : m_pProjectileHolder->GetChildren<Projectile>()) {
 		if (projectile->IsMarkedForDelete()) {
-			//m_Projectiles.erase(std::remove(m_Projectiles.begin(), m_Projectiles.end(), projectile));
-			m_pProjectileHolder->RemoveChild(projectile);
+			m_pProjectileHolder->RemoveChild(projectile, true);
+		}
+	}
+	
+	for (auto enemy : m_pEnemyHolder->GetChildren<ExamRangedCharacter>()) {
+		if (enemy->GetHealth() <= 0) {
+			m_pEnemyHolder->RemoveChild(enemy);
+		}
+	}
+	for (auto enemy : m_pEnemyHolder->GetChildren<EnemyMeleeCharacter>()) {
+		if (enemy->GetHealth() <= 0) {
+			m_pEnemyHolder->RemoveChild(enemy);
 		}
 	}
 }
@@ -816,13 +804,11 @@ void ExamTestClass::ExecuteMagicCombo()
 				return magic.DefaultMagicType.ProjectileType == ProjectileTypes::SPRAY;
 			}) };
 			if (selectedMagicShield != m_ComboBar.end()) {
-				MagicResult.Damage = selectedMagicShield->DefaultMagicType.Damage;
 				MagicResult.ProjectileType = ProjectileTypes::SHIELD;
 				MagicResult.BaseElementType = selectedMagicShield->ElementType;
 				return;
 			}
 			else if (selectedMagicProjectileBomb != m_ComboBar.end()) {
-				MagicResult.Damage = selectedMagicProjectileBomb->DefaultMagicType.Damage;
 				MagicResult.ProjectileType = ProjectileTypes::PROJECTILEBOMB;
 				MagicResult.BaseElementType = selectedMagicProjectileBomb->ElementType;
 
@@ -831,23 +817,26 @@ void ExamTestClass::ExecuteMagicCombo()
 				//FireProjectile(true);
 			}
 			else if (selectedMagicProjectile != m_ComboBar.end()) {
-				MagicResult.Damage = selectedMagicProjectile->DefaultMagicType.Damage;
 				MagicResult.ProjectileType = ProjectileTypes::PROJECTILE;
 				MagicResult.BaseElementType = selectedMagicProjectile->ElementType;
 
-				ChargeProjectile(true);
+				if (MagicResult.BaseElementType == ElementTypes::ICE) {
+					IsShootingIceProjectile = true;
+					ProjectileTimer = MaxIceProjectileTimer;
+				}
+				else {
+					ChargeProjectile(true);
+				}
 				return;
 				//FireProjectile();
 			}
 			else if (selectedMagicBeam != m_ComboBar.end()) {
-				MagicResult.Damage = selectedMagicBeam->DefaultMagicType.Damage;
 				MagicResult.ProjectileType = ProjectileTypes::BEAM;
 				MagicResult.BaseElementType = selectedMagicBeam->ElementType;
 				m_pBeamMagicEmitter->SetVisibility(true);
 				return;
 			}
 			else {
-				MagicResult.Damage = selectedMagicSpray->DefaultMagicType.Damage;
 				MagicResult.ProjectileType = ProjectileTypes::SPRAY;
 				MagicResult.BaseElementType = selectedMagicSpray->ElementType;
 				m_pSprayMagicEmitter->SetVisibility(true);
@@ -865,14 +854,9 @@ void ExamTestClass::ExecuteMagicCombo()
 		m_pSprayDamageCollider->GetComponent<RigidBodyComponent>()->SetEnableCollision(true);
 
 		for (auto enemy : m_pSprayDamageCollider->GetEnemiesInRange()) {
-			if (auto melee{ dynamic_cast<EnemyMeleeCharacter*>(enemy) }) {
+			if (auto melee{ dynamic_cast<ExamEnemy*>(enemy) }) {
 				if (!melee->GetCanDamage()) {
 					melee->DamageBeamEnter(MagicResult.Damage);
-				}
-			}
-			if (auto ranged{ dynamic_cast<ExamRangedCharacter*>(enemy) }) {
-				if (!ranged->GetCanDamage()) {
-					ranged->DamageBeamEnter(MagicResult.Damage);
 				}
 			}
 		}
@@ -908,14 +892,14 @@ void ExamTestClass::ExecuteAOE()
 			m_pAOEMagicEmitter->SetVisibility(true);
 			AoeFired = true;
 			for (auto enemy : m_pAOEMagicEmitter->GetEnemiesInRange()) {
-				if (auto melee{ dynamic_cast<EnemyMeleeCharacter*>(enemy) }) {
+				if (auto melee{ dynamic_cast<ExamEnemy*>(enemy) }) {
 					melee->SetCanDamageAoE(true);
 					melee->DamageAOE(MagicResult.Damage);
 				}
-				if (auto ranged{ dynamic_cast<ExamRangedCharacter*>(enemy) }) {
+				/*if (auto ranged{ dynamic_cast<ExamRangedCharacter*>(enemy) }) {
 					ranged->SetCanDamageAoE(true);
 					ranged->DamageAOE(MagicResult.Damage);
-				}
+				}*/
 			}
 		}
 	}
@@ -977,6 +961,30 @@ void ExamTestClass::FireProjectile(bool /*isBomb*/)
 	}
 }
 
+void ExamTestClass::FireProjectileBarage() {
+	//add damage the more the projectile is charged
+	auto trans{ m_pCharacter->GetTransform() };
+	auto go{ new Projectile(L"Meshes/IceCone.ovm", trans->GetForward(), trans->GetWorldPosition(), 1000, 1, m_pMaterial, m_pDefaultMaterial, false) };
+	m_pProjectileHolder->AddChild(go);
+	go->SetDamageToGive(MagicResult.Damage);
+	go->GetTransform()->Scale(2);
+
+	//make object face direction it moves in
+	auto forward{ trans->GetForward() };
+	auto rotation{ trans->GetWorldRotation() };
+	auto lookPosition{ trans->GetWorldPosition() };
+	lookPosition.x += forward.x * 10;
+	lookPosition.z += forward.z * 10;
+	//get rotation of character to mouse position in world
+	XMVECTOR direction = XMVectorSubtract(XMLoadFloat3(&lookPosition), XMLoadFloat3(&trans->GetWorldPosition()));
+	float yaw = std::atan2(XMVectorGetX(direction), XMVectorGetZ(direction));
+	//apply rotation to character
+	rotation.x += 90;
+	//rotation.z -= 45;
+	auto newRot = XMFLOAT3{ rotation.x, yaw, rotation.z};
+	go->GetTransform()->Rotate(newRot, false);
+}
+
 void ExamTestClass::ResetCombo()
 {
 	m_ComboPattern = "";
@@ -989,6 +997,8 @@ void ExamTestClass::ResetCombo()
 	MagicResult.Modifiers.clear();
 	MagicResult.TextureName.clear();
 	MagicResult.AOETextureName.clear();
+	MagicResult.Damage = 0;
+	MagicResult.BaseElementType = ElementTypes::NONE;
 	IsExecutingMagic = false;
 
 	ProjectileTimer = 0;
@@ -1002,6 +1012,7 @@ void ExamTestClass::ResetCombo()
 
 	m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->SetEnableCollision(false);
 	m_pSprayDamageCollider->GetComponent<RigidBodyComponent>()->SetEnableCollision(false);
+	IsShootingIceProjectile = false;
 }
 #pragma endregion
 
@@ -1064,11 +1075,11 @@ void ExamTestClass::FillMagicResultData()
 		MagicResult.AOETextureName.insert(type.AOETextureName);
 		MagicResult.TextureName.insert(type.TextureName);
 
-		//add the damage from the extra element once
-		if (magic == MagicResult.Modifiers.end()) {
-			//adds damage from extra elements
-			MagicResult.Damage += type.DefaultMagicType.AddedDamage;
-		}
+		////add the damage from the extra element once
+		//if (magic == MagicResult.Modifiers.end()) {
+		//}
+		//adds damage from extra elements
+		MagicResult.Damage += type.DefaultMagicType.AddedDamage;
 	}
 }
 void ExamTestClass::ChargeProjectile(bool isBomb)

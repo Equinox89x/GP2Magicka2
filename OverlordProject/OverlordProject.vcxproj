@@ -93,6 +93,7 @@
     <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Prefabs\ExamEnemy.cpp" />
     <ClCompile Include="Prefabs\ExamRangedCharacter.cpp" />
     <ClCompile Include="Prefabs\EnemyMeleeCharacter.cpp" />
     <ClCompile Include="Materials\BasicMaterial.cpp" />
@@ -153,6 +154,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Prefabs\ExamEnemy.h" />
     <ClInclude Include="Prefabs\ExamRangedCharacter.h" />
     <ClInclude Include="Prefabs\EnemyMeleeCharacter.h" />
     <ClInclude Include="Materials\BasicMaterial.h" />

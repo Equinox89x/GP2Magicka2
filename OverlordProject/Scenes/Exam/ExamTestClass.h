@@ -222,6 +222,7 @@ public:
 	void ExecuteSelfCast();
 	void ExecuteSword();
 	void FireProjectile(bool isBomb = false);
+	void FireProjectileBarage();
 
 
 protected:
@@ -258,6 +259,7 @@ private:
 	GameObject* m_pSprayDamageCollider{ nullptr };
 	GameObject* m_pSprayDamageColliderContainer{ nullptr };
 	GameObject* m_pProjectileHolder{ nullptr };
+	GameObject* m_pEnemyHolder{ nullptr };
 	DiffuseMaterial* m_pMaterial{};
 	DiffuseMaterial* m_pLevelMaterial{};
 	std::vector<std::wstring> m_Textures{};
@@ -282,9 +284,9 @@ private:
 	MagickaCamera* m_pCamera{};
 	int currentLineIndex{ 0 };
 	bool CanIncrease{ true };
-	bool IsExecutingMagic{ false }, IsChargingProjectile{ false }, IsBombProjectile;
+	bool IsExecutingMagic{ false }, IsChargingProjectile{ false }, IsShootingIceProjectile, IsBombProjectile;
 	bool AoeFired{ false };
-	float AoeTimer{ 2 }, ProjectileTimer{ 0 }, MaxProjectileTimer{ 5 };
+	float AoeTimer{ 2 }, ProjectileTimer{ 0 }, MaxProjectileTimer{ 5 }, MaxIceProjectileTimer{ 0.2f };
 
 	//input
 	enum InputIds
@@ -325,6 +327,7 @@ private:
 
 	void ChargeProjectile(bool isBomb = false);
 	void HandleEnemies();
+	void HandleTimers();
 
 	//debug
 	void HandlePrint(const ElementTypes currentMagic) const;
