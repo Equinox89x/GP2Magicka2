@@ -9,6 +9,7 @@
 #include <list>
 #include <set>
 #include <Materials/Shadow/DiffuseMaterial_Shadow.h>
+#include <Materials/DiffuseMaterial_Skinned.h>
 
 
 
@@ -251,6 +252,7 @@ protected:
 private:
 	//setup
 	PxMaterial* m_Material{};
+	DiffuseMaterial_Shadow* m_pProjectileMaterial{};
 	PxMaterial* m_pDefaultMaterial{};
 	XMFLOAT3 m_Size{ 10,10, 10 };
 	ExamCharacter* m_pCharacter{};
@@ -271,7 +273,7 @@ private:
 	GameObject* m_pEnemyHolder{ nullptr };
 	GameObject* m_pMenu{ nullptr };
 	GameObject* m_pWinLoseScreen{ nullptr };
-	DiffuseMaterial_Shadow* m_pMaterial{};
+	DiffuseMaterial_Skinned* m_pMaterial{};
 	DiffuseMaterial_Shadow* m_pLevelMaterial{};
 	std::vector<std::wstring> m_Textures{};
 	std::vector<std::wstring> m_TransparentTextures{};

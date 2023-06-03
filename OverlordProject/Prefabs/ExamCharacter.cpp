@@ -19,8 +19,9 @@ void ExamCharacter::Initialize(const SceneContext& /*sceneContext*/)
 
 void ExamCharacter::Update(const SceneContext& sceneContext)
 {
+	auto Animator = GetComponent<ModelComponent>()->GetAnimator();
 	float deltaTime = sceneContext.pGameTime->GetElapsed();
-
+	CanWalk = true;
 	//## Input Gathering (move, look, rotation)
 	XMFLOAT2 look{ 0.f, 0.f };
 	XMFLOAT3 newRot{ 0.f, 0.f, 0.f };
@@ -46,6 +47,17 @@ void ExamCharacter::Update(const SceneContext& sceneContext)
 			}
 		}
 	}
+
+	if (!CanWalk) return;
+	bool isAnimating{ false };
+	if (Animator->GetClip(0).name == Animator->GetClipName()) {
+		isAnimating = Animator->IsPlaying();
+	}
+	if (!isAnimating) {
+		Animator->SetAnimation(0);
+		Animator->Play();
+	}
+
 }
 
 float MapRange(float value, float inputMin, float inputMax, float outputMin, float outputMax) {
@@ -89,7 +101,6 @@ void ExamCharacter::HandleRotation(const SceneContext& sceneContext, DirectX::XM
 	//apply rotation to character
 	GetComponent<ModelComponent>()->GetTransform()->Rotate(newRot, false);
 	//}
-
 }
 
 void ExamCharacter::HandleMove(const SceneContext& sceneContext, DirectX::XMFLOAT3& /*newRot*/, const float& epsilon)
@@ -121,6 +132,22 @@ void ExamCharacter::CalculateForwardMovement(const float& epsilon)
 	XMFLOAT3 displacement;
 	XMVECTOR displacementVec = XMVectorScale(XMLoadFloat3(&forward), 1.f);
 	XMStoreFloat3(&displacement, displacementVec);
+
+	auto Animator = GetComponent<ModelComponent>()->GetAnimator();
+	bool isAnimating{ false };
+	if (Animator->GetClip(3).name == Animator->GetClipName()) {
+		isAnimating = Animator->IsPlaying();
+	}
+	if (!isAnimating) {
+		Animator->SetAnimation(3);
+		Animator->Play();
+		CanWalk = false;
+		std::cout << "nope";
+	}
+	else {
+		CanWalk = false;
+	}
+
 	if (!IsPaused) GetComponent<ControllerComponent>()->Move(displacement, epsilon);
 }
 
@@ -172,7 +199,7 @@ void ExamCharacter::HandleInput(const SceneContext& sceneContext, bool& shiftPre
 	}
 
 	if (IsPaused) return;
-
+	auto Animator = GetComponent<ModelComponent>()->GetAnimator();
 	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_ElementBottom)) {
 		//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
 		scene->HandleCombobarFilling(shiftPressed ? ElementTypes::LIGHTNING : ElementTypes::WATER);
@@ -188,6 +215,22 @@ void ExamCharacter::HandleInput(const SceneContext& sceneContext, bool& shiftPre
 	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_AoEAttack)) {
 		//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
 		scene->ExecuteAOE();
+
+
+		bool isAnimating{ false };
+		if (Animator->GetClip(1).name == Animator->GetClipName()) {
+			isAnimating = Animator->IsPlaying();
+		}
+		if (!isAnimating) {
+			Animator->SetAnimation(1);
+			Animator->Play();
+			CanWalk = false;
+		}
+		else {
+			CanWalk = false;
+		}
+
+
 	}
 	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_SelfCast)) {
 		//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
@@ -202,6 +245,20 @@ void ExamCharacter::HandleInput(const SceneContext& sceneContext, bool& shiftPre
 		if (sceneContext.pInput->IsMouseButton(InputState::down, 2)) {
 			//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
 			scene->ExecuteMagicCombo();
+
+			bool isAnimating{ false };
+			if (Animator->GetClip(2).name == Animator->GetClipName()) {
+				isAnimating = Animator->IsPlaying();
+			}
+			if (!isAnimating) {
+				Animator->SetAnimation(2);
+				Animator->Play();
+				CanWalk = false;
+			}
+			else {
+				CanWalk = false;
+			}
+
 		}
 		if (sceneContext.pInput->IsMouseButton(InputState::released, 2)) {
 			//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };

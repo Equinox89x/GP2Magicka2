@@ -97,5 +97,8 @@ private:
 	float m_Health{ 3000 };
 	float DamageToTake{ 0 }, DamageTimer{ 1 };
 	bool IsPaused{ false };
+	//ModelAnimator* Animator;
+	bool CanWalk{ true };
+
 };
 

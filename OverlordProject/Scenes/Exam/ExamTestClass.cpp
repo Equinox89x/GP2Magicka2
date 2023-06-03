@@ -19,8 +19,11 @@ void ExamTestClass::Initialize()
 
 	m_Material = PxGetPhysics().createMaterial(.5f, .5f, .5f);
 
-	m_pMaterial = MaterialManager::Get()->CreateMaterial<DiffuseMaterial_Shadow>();
+	m_pMaterial = MaterialManager::Get()->CreateMaterial<DiffuseMaterial_Skinned>();
 	m_pMaterial->SetDiffuseTexture(L"Textures/Chair_Dark.dds");
+	
+	m_pProjectileMaterial = MaterialManager::Get()->CreateMaterial<DiffuseMaterial_Shadow>();
+	m_pProjectileMaterial->SetDiffuseTexture(L"Textures/Chair_Dark.dds");
 
 	m_pLevelMaterial = MaterialManager::Get()->CreateMaterial<DiffuseMaterial_Shadow>();
 	m_pLevelMaterial->SetDiffuseTexture(L"Textures/level.dds");
@@ -175,9 +178,11 @@ void ExamTestClass::CreateCharacter()
 
 	m_pCharacter = AddChild(new ExamCharacter(characterDesc));
 	m_pCharacter->GetTransform()->Translate(-50.f, 5.f, 100.f);
-	m_pCharacter->AddComponent(new ModelComponent(L"Meshes/wizard.ovm"));
+	m_pCharacter->AddComponent(new ModelComponent(L"Meshes/wizard.ovm", true));
 	m_pCharacter->GetComponent<ModelComponent>()->SetMaterial(m_pMaterial);
+	m_pCharacter->GetComponent<ModelComponent>()->GetTransform()->Rotate(0,90,0);
 	m_pCharacter->GetTransform()->Scale(0.5f);
+	//m_pCharacter->GetTransform()->Rotate(0, 180, 0);
 
 	for (auto comp : m_pCharacter->GetComponents<ParticleEmitterComponent>()) {
 		comp->GetTransform()->Translate(0, 20, 0);
@@ -254,7 +259,7 @@ void ExamTestClass::CreateEnemies() {
 	{
 		EnemyMeleeCharacter* enemy = new EnemyMeleeCharacter(enemyDesc, XMFLOAT3{ width, 5.f, -100 });
 		m_pEnemyHolder->AddChild(enemy);
-		enemy->AddComponent(new ModelComponent(L"Meshes/wizard.ovm"));
+		enemy->AddComponent(new ModelComponent(L"Meshes/wizard.ovm", true));
 		enemy->GetComponent<ModelComponent>()->SetMaterial(m_pMaterial);
 
 		enemy->AddComponent(new RigidBodyComponent());
@@ -295,7 +300,7 @@ void ExamTestClass::CreateEnemies() {
 		ExamRangedCharacter* enemy = new ExamRangedCharacter(enemyRangedDesc, XMFLOAT3{ width, 5.f, -150 });
 		m_pEnemyHolder->AddChild(enemy);
 		enemy->SetProjectileHolder(m_pProjectileHolder);
-		enemy->AddComponent(new ModelComponent(L"Meshes/wizard.ovm"));
+		enemy->AddComponent(new ModelComponent(L"Meshes/wizard.ovm", true));
 		enemy->GetComponent<ModelComponent>()->SetMaterial(m_pMaterial);
 
 		enemy->AddComponent(new RigidBodyComponent());
@@ -990,7 +995,7 @@ void ExamTestClass::FireProjectile(bool /*isBomb*/)
 
 		float launchSpeed{ 100 };
 		launchSpeed += launchSpeed * force;
-		auto go{ new Projectile(L"Meshes/Rock.ovm", trans->GetForward(), trans->GetWorldPosition(), launchSpeed, downForce, m_pMaterial, m_pDefaultMaterial, IsBombProjectile) };
+		auto go{ new Projectile(L"Meshes/Rock.ovm", trans->GetForward(), trans->GetWorldPosition(), launchSpeed, downForce, m_pProjectileMaterial, m_pDefaultMaterial, IsBombProjectile) };
 		m_pProjectileHolder->AddChild(go);
 		go->SetDamageToGive(MagicResult.Damage);
 	}
@@ -1001,7 +1006,7 @@ void ExamTestClass::FireProjectileBarage() {
 	auto forward{ trans->GetForward() };
 	auto originalPosition{ trans->GetWorldPosition() };
 	auto rotation{ trans->GetWorldRotation() };
-	auto go{ new Projectile(L"Meshes/IceCone.ovm", forward, originalPosition, 1000, 1, m_pMaterial, m_pDefaultMaterial, false) };
+	auto go{ new Projectile(L"Meshes/IceCone.ovm", forward, originalPosition, 1000, 1, m_pProjectileMaterial, m_pDefaultMaterial, false) };
 	m_pProjectileHolder->AddChild(go);
 	go->SetDamageToGive(MagicResult.Damage);
 	go->GetTransform()->Scale(2);
