@@ -14,9 +14,16 @@ void ExamTestClass::Initialize()
 	//m_SceneContext.settings.drawPhysXDebug = true;
 	m_SceneContext.settings.drawGrid = true;
 	m_SceneContext.settings.enableOnGUI = true;
-	m_pMaterial = MaterialManager::Get()->CreateMaterial<DiffuseMaterial>();
+
+	m_pDefaultMaterial = PxGetPhysics().createMaterial(0.5f, 0.5f, 0.5f);
+
 	m_Material = PxGetPhysics().createMaterial(.5f, .5f, .5f);
+
+	m_pMaterial = MaterialManager::Get()->CreateMaterial<DiffuseMaterial_Shadow>();
 	m_pMaterial->SetDiffuseTexture(L"Textures/Chair_Dark.dds");
+
+	m_pLevelMaterial = MaterialManager::Get()->CreateMaterial<DiffuseMaterial_Shadow>();
+	m_pLevelMaterial->SetDiffuseTexture(L"Textures/level.dds");
 
 	CreateMagic();
 	m_ComboBar.reserve(5);
@@ -41,31 +48,41 @@ void ExamTestClass::Initialize()
 
 	CreateUI();
 
-	m_pProjectileHolder = AddChild(new GameObject());
-
 	ResetCombo();
+
+	m_SceneContext.pLights->SetDirectionalLight({ -95.6139526f,66.1346436f,-41.1850471f }, { 0.740129888f, -0.597205281f, 0.309117377f });
+
+
+	auto go2{ new GameObject() };
+	m_pMenu = AddChild(go2);
+	m_pMenu->AddComponent(new SpriteComponent(L"Textures/Magicka/Menu_Start.png"));
+
+	auto go{ new GameObject() };
+	m_pWinLoseScreen = AddChild(go);
+	m_pWinLoseScreen->AddComponent(new SpriteComponent(L"Textures/Magicka/Game_Won.png"));
+
+	m_pWinLoseScreen->SetVisibility(false);
+	m_pMenu->SetVisibility(true);
+	m_pUI->SetVisibility(false);
+	m_pUI2->SetVisibility(false);
+	m_pUI3->SetVisibility(false);
+	SetPaused(true);
+
+	SoundSystem = SoundManager::Get()->GetSystem();
+	auto file{ ContentManager::GetFullAssetPath(L"Sound/fire.wav") };
+	SoundSystem->createSound(file.string().c_str(), FMOD_DEFAULT, nullptr, &FireSound);
+	file = ContentManager::GetFullAssetPath(L"Sound/laser.wav");
+	SoundSystem->createSound(file.string().c_str(), FMOD_DEFAULT, nullptr, &LaserSound);
+	file = ContentManager::GetFullAssetPath(L"Sound/aoe.mp3");
+	SoundSystem->createSound(file.string().c_str(), FMOD_DEFAULT, nullptr, &AoeSound);
+	file = ContentManager::GetFullAssetPath(L"Sound/projectile.wav");
+	SoundSystem->createSound(file.string().c_str(), FMOD_DEFAULT, nullptr, &ProjectileSound);
 }
 
 void ExamTestClass::SetStartPos()
 {
-	//calculate new position
-	auto p1{ m_pCamera->m_LinePoints[0].points[0]};
-	auto p2{ m_pCamera->m_LinePoints[0].points[1]};
-	auto point{ m_pCharacter->GetTransform()->GetWorldPosition() };
-
-	XMFLOAT3 lineDir = { p2.x - p1.x, p2.y - p1.y, p2.z - p1.z };
-	XMFLOAT3 p1ToPos1 = { point.x - p1.x, point.y - p1.y, point.z - p1.z };
-
-	float dotProduct = lineDir.x * lineDir.x + lineDir.y * lineDir.y + lineDir.z * lineDir.z;
-	float projection = (p1ToPos1.x * lineDir.x + p1ToPos1.y * lineDir.y + p1ToPos1.z * lineDir.z) / dotProduct;
-
-	XMFLOAT3 projectedPoint = { p1.x + (projection * lineDir.x),
-		p1.y + (projection * lineDir.y),
-		p1.z + (projection * lineDir.z) };
-
-	XMFLOAT3 newPos{ projectedPoint.x, p1.y, projectedPoint.z };
-	Sphere->GetTransform()->Translate(newPos);
-
+	m_pCamera->CalculateStartPosition();
+	auto projectedPoint{ m_pCamera->GetProjectedLinePoint() };
 	XMFLOAT3 p{ m_pCamera->GetTransform()->GetWorldPosition() };
 	p.x += projectedPoint.x;
 	p.y += projectedPoint.y;
@@ -82,15 +99,12 @@ void ExamTestClass::SetStartPos()
 void ExamTestClass::CreateLevel()
 {
 	//Ground Plane
-	m_pDefaultMaterial = PxGetPhysics().createMaterial(0.5f, 0.5f, 0.5f);
 	GameSceneExt::CreatePhysXGroundPlane(*this, m_pDefaultMaterial);
 
 	//level
 	m_pLevel = new GameObject();
 	AddChild(m_pLevel);
 	m_pLevel->AddComponent(new ModelComponent(L"Meshes/level.ovm"));
-	m_pLevelMaterial = MaterialManager::Get()->CreateMaterial<DiffuseMaterial>();
-	m_pLevelMaterial->SetDiffuseTexture(L"Textures/level.dds");
 	m_pLevel->GetComponent<ModelComponent>()->SetMaterial(m_pLevelMaterial);
 
 	m_pLevel->AddComponent(new RigidBodyComponent());
@@ -125,6 +139,15 @@ void ExamTestClass::CreateInput()
 	
 	inputAction = InputAction(SelfCast, InputState::down, VK_LSHIFT, -1, XINPUT_GAMEPAD_RIGHT_SHOULDER);
 	m_SceneContext.pInput->AddInputAction(inputAction);
+
+	inputAction = InputAction(Menu, InputState::down, VK_SPACE, -1);
+	m_SceneContext.pInput->AddInputAction(inputAction);
+
+	inputAction = InputAction(MenuUp, InputState::down, VK_UP, -1, XINPUT_GAMEPAD_DPAD_UP);
+	m_SceneContext.pInput->AddInputAction(inputAction);
+
+	inputAction = InputAction(MenuDown, InputState::down, VK_DOWN, -1, XINPUT_GAMEPAD_DPAD_DOWN);
+	m_SceneContext.pInput->AddInputAction(inputAction);
 }
 
 void ExamTestClass::CreateCharacter()
@@ -140,6 +163,10 @@ void ExamTestClass::CreateCharacter()
 	characterDesc.actionId_AoEAttack = AoEAttack;
 	characterDesc.actionId_SelfCast = SelfCast;
 	characterDesc.actionId_SwordInput = SwordInput;
+
+	characterDesc.actionId_Menu = Menu;
+	characterDesc.actionId_MenuDown = MenuDown;
+	characterDesc.actionId_MenuUp = MenuUp;
 
 	characterDesc.actionId_Move = Move;
 	characterDesc.actionId_Execute = Execute;
@@ -220,6 +247,7 @@ void ExamTestClass::CreateEnemies() {
 	CharacterDescExtended enemyDesc{ m_Material };
 	enemyDesc.maxMoveSpeed = 55;
 	m_pEnemyHolder = AddChild(new GameObject());
+	m_pProjectileHolder = AddChild(new GameObject());
 
 	float width{ 50 };
 	for (size_t i = 0; i < 5; i++)
@@ -255,7 +283,6 @@ void ExamTestClass::CreateEnemies() {
 
 		enemy->m_pCharacter = m_pCharacter;
 		enemy->GetTransform()->Scale(0.5f);
-		m_pMeleeEnemies.push_back(enemy);
 		width -= 30;
 	}
 
@@ -267,6 +294,7 @@ void ExamTestClass::CreateEnemies() {
 	{
 		ExamRangedCharacter* enemy = new ExamRangedCharacter(enemyRangedDesc, XMFLOAT3{ width, 5.f, -150 });
 		m_pEnemyHolder->AddChild(enemy);
+		enemy->SetProjectileHolder(m_pProjectileHolder);
 		enemy->AddComponent(new ModelComponent(L"Meshes/wizard.ovm"));
 		enemy->GetComponent<ModelComponent>()->SetMaterial(m_pMaterial);
 
@@ -302,7 +330,6 @@ void ExamTestClass::CreateEnemies() {
 
 		enemy->m_pCharacter = m_pCharacter;
 		enemy->GetTransform()->Scale(0.5f);
-		m_pRangedEnemies.push_back(enemy);
 		width -= 30;
 	}
 }
@@ -454,13 +481,10 @@ void ExamTestClass::CreateEmitters()
 
 	//aoe
 	m_pAOEMagicEmitter = AddChild(new TorusPrefab(50.f, 50, 20.f, 50, XMFLOAT4{1,0,0,1}));
-	m_pAOEMagicEmitter->AddComponent(component);
-	m_pAOEMagicEmitter->GetTransform()->Rotate(90, 0, 0);
-
+	m_pAOEMagicEmitter->GetTransform()->Rotate(90,0,0);
 	m_pAOEMagicEmitter->AddComponent(new RigidBodyComponent());
 	m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->AddCollider(PxBoxGeometry{ 70,70,70 }, *m_pDefaultMaterial);
 	m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->SetKinematic(true);
-
 	colliderInfo = m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->GetCollider(0);
 	colliderInfo.SetTrigger(true);
 
@@ -622,6 +646,21 @@ void ExamTestClass::Update()
 	HandleTimers();
 
 	HandleEnemies();
+
+	if (m_pCharacter->GetHealth() <= 0) {
+		SetGameOver(false);
+	}
+
+	if (m_pEnemyHolder->GetChildren<ExamCharacter>().size() == 0 && m_pCamera->GetReachedEnd()) {
+		SetGameOver(true);
+	}
+
+	const auto pCameraTransform = m_SceneContext.pCamera->GetTransform();
+	m_SceneContext.pLights->SetDirectionalLight(pCameraTransform->GetPosition(), pCameraTransform->GetForward());
+
+	//SoundSystem->update();
+
+	SoundManager::Get()->GetSystem()->update();
 }
 
 void ExamTestClass::HandleTimers() {
@@ -653,7 +692,7 @@ void ExamTestClass::HandleEmitterMovement(XMFLOAT3 pos) {
 	XMFLOAT3 pos2{ m_pCharacter->GetTransform()->GetForward() };
 	pos2.x *= 400 + pos.x;
 	pos2.z *= 400 + pos.z;
-	m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->UpdatePosition(pos, m_pCharacter->GetTransform()->GetRotation());
+	m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->UpdatePosition(pos, m_pAOEMagicEmitter->GetTransform()->GetRotation());
 	m_pBeamMagicEmitter->GetTransform()->Rotate(XMFLOAT3{ 0,0,0 });
 	m_pSprayDamageCollider->GetComponent<RigidBodyComponent>()->UpdatePosition(XMFLOAT3{1,1,220}, m_pSprayDamageCollider->GetTransform()->GetRotation());
 	//m_pSprayDamageColliderContainer->GetTransform()->Translate(pos);
@@ -700,50 +739,23 @@ void ExamTestClass::HandleMagicTransform()
 void ExamTestClass::HandleCameraMovement()
 {
 	auto point{ m_pCharacter->GetTransform()->GetWorldPosition() };
-	auto pos1{ m_pCamera->m_LinePoints[currentLineIndex].points[0]};
-	auto pos2{ m_pCamera->m_LinePoints[currentLineIndex].points[1] };
+	m_pCamera->SetFollowPoint(point);
+	XMFLOAT3 projectedPoint = m_pCamera->GetProjectedLinePoint();
 
-	//project on line
-	XMFLOAT3 lineDir = { pos2.x - pos1.x, pos2.y - pos1.y, pos2.z - pos1.z };
-	XMFLOAT3 p1ToPos1 = { point.x - pos1.x, point.y - pos1.y, point.z - pos1.z };
-
-	float dotProduct = lineDir.x * lineDir.x + lineDir.y * lineDir.y + lineDir.z * lineDir.z;
-	float projection = (p1ToPos1.x * lineDir.x + p1ToPos1.y * lineDir.y + p1ToPos1.z * lineDir.z) / dotProduct;
-	XMFLOAT3 projectedPoint = { pos1.x + (projection * lineDir.x), pos1.y + (projection * lineDir.y), pos1.z + (projection * lineDir.z) };
-
-	XMFLOAT3 newPos{ projectedPoint.x, pos1.y, projectedPoint.z };
-	if (MathHelper::IsPointInCircle3D(newPos, pos1, 0.5f)) {
-		if (CanIncrease) {
-			currentLineIndex--;
-			CanIncrease = false;
-		}
-	}
-	else if (MathHelper::IsPointInCircle3D(newPos, pos2, 0.5f)) {
-		if (CanIncrease) {
-			currentLineIndex++;
-			CanIncrease = false;
-		}
-	}	
-	else {
-	}
-
-	Sphere->GetTransform()->Translate(newPos);
-	auto newpos1{ m_pCamera->m_LinePoints[currentLineIndex].points[0] };
-	auto newpos2{ m_pCamera->m_LinePoints[currentLineIndex].points[1] };
-	
-	if (MathHelper::CheckRange(newPos.x, newpos1.x, newpos2.x) ||
-		//newpos1.y < y && y < newpos2.y ||
-		MathHelper::CheckRange(newPos.z, newpos1.z, newpos2.z)) {
-		CanIncrease = true;
-
-	}
+	XMFLOAT3 newPos = m_pCamera->GetProjectedPoint();
 
 	//move camera with projected point
 	XMFLOAT3 pos{ m_pCamera->GetTransform()->GetWorldPosition() };
 	pos.x += projectedPoint.x;
 	pos.y += projectedPoint.y;
 	pos.z += projectedPoint.z;
-	m_SceneContext.pCamera->GetTransform()->Translate(pos);
+	
+	//m_SceneContext.pCamera->GetTransform()->Translate(pos);
+	if(!m_pCamera->GetIsInStart()) 
+		if (!m_pCamera->GetReachedEnd()) {
+			Sphere->GetTransform()->Translate(newPos);
+			m_SceneContext.pCamera->GetTransform()->Translate(pos);
+		}
 }
 
 void ExamTestClass::HandleEnemies()
@@ -756,12 +768,14 @@ void ExamTestClass::HandleEnemies()
 	
 	for (auto enemy : m_pEnemyHolder->GetChildren<ExamRangedCharacter>()) {
 		if (enemy->GetHealth() <= 0) {
-			m_pEnemyHolder->RemoveChild(enemy);
+			enemy->SetMarkedForDestroy(true);
+			m_pEnemyHolder->RemoveChild(enemy, true);
 		}
 	}
 	for (auto enemy : m_pEnemyHolder->GetChildren<EnemyMeleeCharacter>()) {
 		if (enemy->GetHealth() <= 0) {
-			m_pEnemyHolder->RemoveChild(enemy);
+			enemy->SetMarkedForDestroy(true);
+			m_pEnemyHolder->RemoveChild(enemy, true);
 		}
 	}
 }
@@ -773,10 +787,7 @@ void ExamTestClass::Draw()
 	m_pCamera->Draw(SceneContext());
 }
 
-void ExamTestClass::PostDraw()
-{
-	//HandleCameraMovement();
-}
+void ExamTestClass::PostDraw() {}
 #pragma endregion
 
 #pragma region Execution
@@ -788,6 +799,9 @@ void ExamTestClass::ExecuteMagicCombo()
 		FillMagicResultData();
 
 		if (m_ComboBar.size() > 0) {
+			bool isPlaying;
+			CurrentChannel->isPlaying(&isPlaying);
+
 			const auto& selectedMagicShield{ std::find_if(m_ComboBar.begin(), m_ComboBar.end(), [&](const Magic& magic) {
 				return magic.DefaultMagicType.ProjectileType == ProjectileTypes::SHIELD;
 			}) };
@@ -834,6 +848,8 @@ void ExamTestClass::ExecuteMagicCombo()
 				MagicResult.ProjectileType = ProjectileTypes::BEAM;
 				MagicResult.BaseElementType = selectedMagicBeam->ElementType;
 				m_pBeamMagicEmitter->SetVisibility(true);
+
+				if (!isPlaying) SoundSystem->playSound(LaserSound, nullptr, false, &CurrentChannel);
 				return;
 			}
 			else {
@@ -845,6 +861,8 @@ void ExamTestClass::ExecuteMagicCombo()
 					std::advance(it, 0);
 					comp->SetTexture(m_SceneContext, *it);
 				}
+
+				if (!isPlaying) SoundSystem->playSound(FireSound, nullptr, false, &CurrentChannel);
 			}
 
 		}
@@ -854,6 +872,11 @@ void ExamTestClass::ExecuteMagicCombo()
 		m_pSprayDamageCollider->GetComponent<RigidBodyComponent>()->SetEnableCollision(true);
 
 		for (auto enemy : m_pSprayDamageCollider->GetEnemiesInRange()) {
+			if (enemy->GetMarkedForDestroy()) {
+				m_pSprayDamageCollider->GetEnemiesInRange().remove(enemy);
+				break;
+			}
+
 			if (auto melee{ dynamic_cast<ExamEnemy*>(enemy) }) {
 				if (!melee->GetCanDamage()) {
 					melee->DamageBeamEnter(MagicResult.Damage);
@@ -868,6 +891,7 @@ void ExamTestClass::ExecuteAOE()
 {
 	if (!IsExecutingMagic) {
 		IsExecutingMagic = true;
+
 		auto components{ m_pAOEMagicEmitter->GetComponents<ParticleEmitterComponent>() };
 		MagicResult.ProjectileType = ProjectileTypes::AOE;
 
@@ -890,8 +914,19 @@ void ExamTestClass::ExecuteAOE()
 		if (MagicResult.Modifiers.size() > 0 && m_ComboBar.size() > 0) {
 			m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->SetEnableCollision(true);
 			m_pAOEMagicEmitter->SetVisibility(true);
+			m_pSprayMagicEmitter->SetVisibility(false);
 			AoeFired = true;
+
+			bool isPlaying;
+			CurrentChannel->isPlaying(&isPlaying);
+			if (!isPlaying) SoundSystem->playSound(AoeSound, nullptr, false, &CurrentChannel);
+
 			for (auto enemy : m_pAOEMagicEmitter->GetEnemiesInRange()) {
+				if (enemy->GetMarkedForDestroy()) {
+					m_pAOEMagicEmitter->GetEnemiesInRange().remove(enemy);
+					break;
+				}
+
 				if (auto melee{ dynamic_cast<ExamEnemy*>(enemy) }) {
 					melee->SetCanDamageAoE(true);
 					melee->DamageAOE(MagicResult.Damage);
@@ -962,27 +997,20 @@ void ExamTestClass::FireProjectile(bool /*isBomb*/)
 }
 
 void ExamTestClass::FireProjectileBarage() {
-	//add damage the more the projectile is charged
 	auto trans{ m_pCharacter->GetTransform() };
-	auto go{ new Projectile(L"Meshes/IceCone.ovm", trans->GetForward(), trans->GetWorldPosition(), 1000, 1, m_pMaterial, m_pDefaultMaterial, false) };
+	auto forward{ trans->GetForward() };
+	auto originalPosition{ trans->GetWorldPosition() };
+	auto rotation{ trans->GetWorldRotation() };
+	auto go{ new Projectile(L"Meshes/IceCone.ovm", forward, originalPosition, 1000, 1, m_pMaterial, m_pDefaultMaterial, false) };
 	m_pProjectileHolder->AddChild(go);
 	go->SetDamageToGive(MagicResult.Damage);
 	go->GetTransform()->Scale(2);
 
-	//make object face direction it moves in
-	auto forward{ trans->GetForward() };
-	auto rotation{ trans->GetWorldRotation() };
-	auto lookPosition{ trans->GetWorldPosition() };
-	lookPosition.x += forward.x * 10;
-	lookPosition.z += forward.z * 10;
-	//get rotation of character to mouse position in world
-	XMVECTOR direction = XMVectorSubtract(XMLoadFloat3(&lookPosition), XMLoadFloat3(&trans->GetWorldPosition()));
-	float yaw = std::atan2(XMVectorGetX(direction), XMVectorGetZ(direction));
 	//apply rotation to character
 	rotation.x += 90;
-	//rotation.z -= 45;
-	auto newRot = XMFLOAT3{ rotation.x, yaw, rotation.z};
+	auto newRot = MathHelper::GetRotationTowardsPoint(originalPosition, forward, rotation, true);
 	go->GetTransform()->Rotate(newRot, false);
+	SoundSystem->playSound(ProjectileSound, nullptr, false, &CurrentChannel);
 }
 
 void ExamTestClass::ResetCombo()
@@ -1000,7 +1028,6 @@ void ExamTestClass::ResetCombo()
 	MagicResult.Damage = 0;
 	MagicResult.BaseElementType = ElementTypes::NONE;
 	IsExecutingMagic = false;
-
 	ProjectileTimer = 0;
 
 	AoeFired = false;
@@ -1013,6 +1040,10 @@ void ExamTestClass::ResetCombo()
 	m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->SetEnableCollision(false);
 	m_pSprayDamageCollider->GetComponent<RigidBodyComponent>()->SetEnableCollision(false);
 	IsShootingIceProjectile = false;
+
+	bool isPlaying;
+	CurrentChannel->isPlaying(&isPlaying);
+	if (isPlaying) CurrentChannel->stop();
 }
 #pragma endregion
 
@@ -1091,7 +1122,7 @@ void ExamTestClass::ChargeProjectile(bool isBomb)
 
 #pragma region Combo-ing
 void ExamTestClass::HandleCombobarFilling(ElementTypes elementType)
-{
+{	
 	//find the spell of the current element type
 	const auto comparator{ [&elementType](const Magic& magic) { return magic.ElementType == elementType; } };
 	Magic* currentMagic{ std::find_if(m_Magics.begin(), m_Magics.end(), comparator)._Ptr };
@@ -1099,27 +1130,20 @@ void ExamTestClass::HandleCombobarFilling(ElementTypes elementType)
 	//get index of previous element
 	const int currentIterator{ static_cast<int>(m_ComboBar.size()) - 1 };
 	bool foundCanceller{ false };
+	bool isCombined{ false };
 
 	if (m_ComboBar.empty()) {
 		//push the magic
 		m_ComboBar.push_back(*currentMagic);
 		m_ComboPattern += currentMagic->ElementType;
 		HandlePrint(currentMagic->ElementType);
+		m_pUI3->GetChildren<GameObject>()[m_ComboBar.size() - 1]->GetComponent<SpriteComponent>()->SetTexture(currentMagic->UITextureName);
 	}
-	else if (m_ComboBar.size() >= 5) {
-		//remove element from pattern if opposite and return
-		if (IsMagicCancelled(currentIterator, currentMagic, foundCanceller)) {
-			m_pUI3->GetChildren<GameObject>()[m_ComboBar.size()-1]->GetComponent<SpriteComponent>()->SetTexture(L"Textures/Magicka/Element_none.png");
-			m_ComboBar.pop_back();
-			m_ComboPattern.pop_back();
-			return;
-		}
-	}
-	else if (!m_ComboBar.empty() && m_ComboBar.size() < 5) {
+	else if (!m_ComboBar.empty() && m_ComboBar.size() <= 5) {
 		//remove element from pattern if opposite and return
 		if (IsMagicCancelled(currentIterator, currentMagic, foundCanceller))
 		{
-			m_pUI3->GetChildren<GameObject>()[m_ComboBar.size()-1]->GetComponent<SpriteComponent>()->SetTexture(L"Textures/Magicka/Element_none.png");
+			m_pUI3->GetChildren<GameObject>()[m_ComboBar.size() - 1]->GetComponent<SpriteComponent>()->SetTexture(L"Textures/Magicka/Element_none.png");
 			m_ComboBar.pop_back();
 			m_ComboPattern.pop_back();
 			return;
@@ -1141,16 +1165,23 @@ void ExamTestClass::HandleCombobarFilling(ElementTypes elementType)
 					m_ComboBar.pop_back();
 					m_ComboPattern.pop_back();
 					currentMagic = magic;
+					isCombined = true;
 				}
 			}
 
-			//push the magic
-			m_ComboBar.push_back(*currentMagic);
-			m_ComboPattern += currentMagic->ElementType;
-			HandlePrint(currentMagic->ElementType);
+			if (m_ComboBar.size() < 5) {
+				//push the magic
+				m_ComboBar.push_back(*currentMagic);
+				m_ComboPattern += currentMagic->ElementType;
+				HandlePrint(currentMagic->ElementType);
+				m_pUI3->GetChildren<GameObject>()[m_ComboBar.size() - 1]->GetComponent<SpriteComponent>()->SetTexture(currentMagic->UITextureName);
+			}
+			else if (isCombined)
+			{
+				m_pUI3->GetChildren<GameObject>()[m_ComboBar.size() - 1]->GetComponent<SpriteComponent>()->SetTexture(currentMagic->UITextureName);
+			}
 		}
 	}
-	m_pUI3->GetChildren<GameObject>()[m_ComboBar.size()-1]->GetComponent<SpriteComponent>()->SetTexture(currentMagic->UITextureName);
 }
 #pragma endregion
 
@@ -1224,5 +1255,60 @@ void ExamTestClass::HandlePrint2(Spells spell) const {
 	}
 
 	std::cout << "Casted spell: " << name << std::endl;
+}
+#pragma endregion
+
+#pragma region Menu and start/end
+void ExamTestClass::StartGame() {
+	m_pWinLoseScreen->SetVisibility(false);
+	m_pMenu->SetVisibility(false);
+	m_pUI->SetVisibility(true);
+	m_pUI2->SetVisibility(true);
+	m_pUI3->SetVisibility(true);
+	SetIsInMenu(false);
+	SetPaused(false);
+}
+
+void ExamTestClass::SetPaused(bool isPaused) {
+	for (auto obj : m_pEnemyHolder->GetChildren<ExamEnemy>()) obj->SetPaused(isPaused);
+	m_pCharacter->SetPaused(isPaused);
+}
+
+void ExamTestClass::SetIsStartSelected(bool isStartSelected){
+	IsStartSelected = isStartSelected; 
+	if (IsStartSelected) {
+		m_pMenu->GetComponent<SpriteComponent>()->SetTexture(L"Textures/Magicka/Menu_Start.png");
+	}
+	else {
+		m_pMenu->GetComponent<SpriteComponent>()->SetTexture(L"Textures/Magicka/Menu_Exit.png");
+	}
+}
+
+void ExamTestClass::SetGameOver(bool hasWon) {
+	HasWon = hasWon;
+	IsGameOver = true;
+	SetPaused(true);
+
+	m_pWinLoseScreen->SetVisibility(true);
+	m_pMenu->SetVisibility(false);
+	m_pUI->SetVisibility(false);
+	m_pUI2->SetVisibility(false);
+	m_pUI3->SetVisibility(false);
+	SetIsInMenu(true);
+	if (!HasWon) {
+		m_pWinLoseScreen->AddComponent(new SpriteComponent(L"Textures/Magicka/Game_Lost.png"));
+	}
+}
+
+void ExamTestClass::ResetGame() {
+	m_pWinLoseScreen->SetVisibility(false);
+	m_pMenu->SetVisibility(true);
+	m_pUI->SetVisibility(false);
+	m_pUI2->SetVisibility(false);
+	m_pUI3->SetVisibility(false);
+	SetIsInMenu(true);
+	SetPaused(true);
+
+	m_pCamera->SetReachedEnd(true);
 }
 #pragma endregion

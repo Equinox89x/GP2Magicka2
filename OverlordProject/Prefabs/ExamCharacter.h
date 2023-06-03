@@ -46,6 +46,11 @@ struct CharacterDescExtended
 	int actionId_AoEAttack{ -1 };
 	int actionId_SelfCast{ -1 };
 	int actionId_SwordInput{-1};
+
+	int actionId_Menu{ -1 };
+	int actionId_MenuUp{ -1 };
+	int actionId_MenuDown{ -1 };
+
 };
 
 class ExamCharacter : public GameObject
@@ -62,6 +67,8 @@ public:
 	void DrawImGui();
 
 	void DamagePlayer(bool canTakeDamage, float damage);
+	float GetHealth() { return m_Health; };
+	void SetPaused(bool isPaused) { IsPaused = isPaused; };
 
 protected:
 	void Initialize(const SceneContext&) override;
@@ -89,5 +96,6 @@ private:
 	bool WasPressed{ false }, CanTakeDamage{ false };
 	float m_Health{ 3000 };
 	float DamageToTake{ 0 }, DamageTimer{ 1 };
+	bool IsPaused{ false };
 };
 

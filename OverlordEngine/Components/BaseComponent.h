@@ -17,7 +17,7 @@ public:
 	GameScene* GetScene() const { return m_pScene; }
 	TransformComponent* GetTransform() const;
 	UINT GetComponentId() const { return m_ComponentId; }
-
+	bool GetMarkedForDestroy() { return m_MarkedForDestroy; };
 protected:
 
 	virtual void Initialize(const SceneContext& sceneContext) = 0;
@@ -37,6 +37,8 @@ protected:
 
 	bool m_enablePostDraw{ false }; //update_W9
 	bool m_enableShadowMapDraw{ false }; //update_W9
+
+	bool m_MarkedForDestroy{ false };
 
 	UINT m_ComponentId{ 0 };
 

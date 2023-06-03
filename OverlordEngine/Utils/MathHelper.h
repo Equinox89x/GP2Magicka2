@@ -95,4 +95,21 @@ namespace MathHelper
 	inline bool CheckRange(double value, double lowerBound, double upperBound) {
 		return value > lowerBound && value < upperBound;
 	}
+
+	//make object face direction of the forward vector, or face the direction towards the target
+	inline XMFLOAT3 GetRotationTowardsPoint(XMFLOAT3 originPosition, XMFLOAT3 targetPosition, XMFLOAT4 originalRotation, bool useForwardVector) {
+		XMVECTOR direction;
+		if (useForwardVector) {
+			auto origin{ originPosition };
+			originPosition.x += targetPosition.x * 10;
+			originPosition.z += targetPosition.z * 10;
+			direction = XMVectorSubtract(XMLoadFloat3(&originPosition), XMLoadFloat3(&origin));
+		}
+		else {
+			direction = XMVectorSubtract(XMLoadFloat3(&targetPosition), XMLoadFloat3(&originPosition));
+		}
+
+		float yaw = std::atan2(XMVectorGetX(direction), XMVectorGetZ(direction));
+		return XMFLOAT3{ originalRotation.x, yaw, originalRotation.z };
+	}
 }

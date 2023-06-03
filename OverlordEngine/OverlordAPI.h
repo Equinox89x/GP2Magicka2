@@ -69,6 +69,7 @@
 #include "SceneGraph/GameScene.h"
 
 #include "Prefabs/FixedCamera.h"
+#include "Prefabs/MagickaCamera.h"
 #include "Prefabs/FreeCamera.h"
 
 #include "Deferred/DeferredRenderer.h"

@@ -2,7 +2,7 @@
 #include "ExamCharacter.h"
 #include "ExamEnemy.h"
 class Projectile;
-class DiffuseMaterial;
+class DiffuseMaterial_Shadow;
 
 class ExamRangedCharacter : public ExamEnemy
 {
@@ -30,6 +30,7 @@ public:
 	float GetAttackDamage() { return m_AttackDamage; };*/
 	void SetCanShoot(bool canShoot) { CanShoot = canShoot; };
 	void FireProjectile();
+	void SetProjectileHolder(GameObject* projectileHolder) { m_ProjectileHolder = projectileHolder; };
 
 	//ExamCharacter* m_pCharacter{ nullptr };
 
@@ -49,9 +50,15 @@ private:
 
 	//XMFLOAT3 PostitionOffset;
 
-	DiffuseMaterial* m_pMaterial{};
+	DiffuseMaterial_Shadow* m_pMaterial{};
 	PxMaterial* m_pDefaultMaterial{};
 	std::vector<Projectile*> m_Projectiles;
+	GameObject* m_ProjectileHolder;
+
+	FMOD::System* SoundSystem;
+	FMOD::Sound* ProjectileSound;
+	FMOD::Channel* CurrentChannel;
+
 
 };
 

@@ -76,6 +76,12 @@ void GameObject::RootUpdate(const SceneContext& sceneContext)
 	//Component Update
 	for(BaseComponent* pComp: m_pComponents)
 	{
+		if (!pComp) return;
+		if (pComp->GetMarkedForDestroy())
+		{
+			m_pComponents.erase(std::remove(m_pComponents.begin(), m_pComponents.end(), pComp)); 
+			break;
+		}
 		if (!pComp->GetGameObject()->IsVisible) continue;
 		pComp->Update(sceneContext);
 	}
@@ -254,6 +260,7 @@ void GameObject::RemoveChild(GameObject* obj, bool deleteObject)
 
 	if(deleteObject)
 	{
+		MarkedForDestroy = true;
 		SafeDelete(obj);
 	}
 }

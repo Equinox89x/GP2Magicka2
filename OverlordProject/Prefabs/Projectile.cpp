@@ -4,7 +4,7 @@
 #include "ExamRangedCharacter.h"
 #include "TorusPrefab.h"
 
-Projectile::Projectile(std::wstring assetFile, XMFLOAT3 forwardVector, XMFLOAT3 initialPosition, float launchSpeed, float downWardsVelocity, DiffuseMaterial* pMaterial, PxMaterial* pColliderMaterial, bool isBomb) :
+Projectile::Projectile(std::wstring assetFile, XMFLOAT3 forwardVector, XMFLOAT3 initialPosition, float launchSpeed, float downWardsVelocity, DiffuseMaterial_Shadow* pMaterial, PxMaterial* pColliderMaterial, bool isBomb) :
 	m_AssetFile{ assetFile },
 	m_ForwardVector{ forwardVector },
 	m_InitialPosition{ initialPosition },
@@ -17,7 +17,7 @@ Projectile::Projectile(std::wstring assetFile, XMFLOAT3 forwardVector, XMFLOAT3 
 
 void Projectile::Initialize(const SceneContext&)
 {
-	//AddChild(new GameObject());
+	AddChild(new GameObject());
 	AddComponent(new ModelComponent(m_AssetFile));
 	GetComponent<ModelComponent>()->SetMaterial(m_pMaterial);
 	m_InitialPosition.z += m_ForwardVector.z * 40;
@@ -83,6 +83,7 @@ void Projectile::Update(const SceneContext& sceneContext)
 			else{ RemoveChild(GetChild<GameObject>(), true); }
 		}
 	}
+
 	m_pLife -= deltaTime;
 	if (m_pLife <= 0) {
 		RemoveChild(GetChild<GameObject>(), true);
@@ -99,6 +100,7 @@ void Projectile::Update(const SceneContext& sceneContext)
 
 void Projectile::Explode()
 {
+
 	//m_CanExplode = true;
 	RemoveComponent(GetComponent<ModelComponent>(), true);
 	GetChild<GameObject>()->AddChild(new TorusPrefab(m_ExplosionRadius, int(m_ExplosionRadius), m_ExplosionRadius/2, int(m_ExplosionRadius), XMFLOAT4{ 1,0,0,1 }));

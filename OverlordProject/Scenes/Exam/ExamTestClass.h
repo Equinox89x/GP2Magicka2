@@ -8,6 +8,8 @@
 #include "Prefabs/Projectile.h"
 #include <list>
 #include <set>
+#include <Materials/Shadow/DiffuseMaterial_Shadow.h>
+
 
 
 class ExamCharacter;
@@ -224,6 +226,15 @@ public:
 	void FireProjectile(bool isBomb = false);
 	void FireProjectileBarage();
 
+	void SetIsInMenu(bool isInMenu) { IsInMenu = isInMenu; };
+	bool GetIsInMenu() { return IsInMenu; };	
+	bool GetGameOver() { return IsGameOver; };	
+	void SetIsStartSelected(bool isStartSelected);
+	bool GetIsStartSelected() { return IsStartSelected; };
+	void StartGame();
+
+	void SetPaused(bool isPaised);
+	void ResetGame();
 
 protected:
 	void Initialize() override;
@@ -243,8 +254,6 @@ private:
 	PxMaterial* m_pDefaultMaterial{};
 	XMFLOAT3 m_Size{ 10,10, 10 };
 	ExamCharacter* m_pCharacter{};
-	std::vector<EnemyMeleeCharacter*> m_pMeleeEnemies{ };
-	std::vector<ExamRangedCharacter*> m_pRangedEnemies{ };
 	GameObject* m_pSprayMagicEmitter{};
 	GameObject* m_pBeamMagicEmitter{ nullptr };
 	GameObject* m_pBeamMagicEmitterContainer{ nullptr };
@@ -260,12 +269,21 @@ private:
 	GameObject* m_pSprayDamageColliderContainer{ nullptr };
 	GameObject* m_pProjectileHolder{ nullptr };
 	GameObject* m_pEnemyHolder{ nullptr };
-	DiffuseMaterial* m_pMaterial{};
-	DiffuseMaterial* m_pLevelMaterial{};
+	GameObject* m_pMenu{ nullptr };
+	GameObject* m_pWinLoseScreen{ nullptr };
+	DiffuseMaterial_Shadow* m_pMaterial{};
+	DiffuseMaterial_Shadow* m_pLevelMaterial{};
 	std::vector<std::wstring> m_Textures{};
 	std::vector<std::wstring> m_TransparentTextures{};
 	ResultingMagic MagicResult{};
 	std::vector<Projectile*> m_Projectiles;
+
+	FMOD::System* SoundSystem;
+	FMOD::Sound* FireSound;
+	FMOD::Sound* AoeSound;
+	FMOD::Sound* ProjectileSound;
+	FMOD::Sound* LaserSound;
+	FMOD::Channel* CurrentChannel;
 
 	//Magic information
 	//Water must always be FIRST in the vector of combined magics
@@ -287,6 +305,7 @@ private:
 	bool IsExecutingMagic{ false }, IsChargingProjectile{ false }, IsShootingIceProjectile, IsBombProjectile;
 	bool AoeFired{ false };
 	float AoeTimer{ 2 }, ProjectileTimer{ 0 }, MaxProjectileTimer{ 5 }, MaxIceProjectileTimer{ 0.2f };
+	bool IsGameOver{ false }, HasWon{ false }, IsInMenu{ true }, IsStartSelected{ true };
 
 	//input
 	enum InputIds
@@ -307,6 +326,9 @@ private:
 		SwordInput = 13,
 		SelfCast = 14,
 		AoEAttack = 15,
+		Menu = 16,
+		MenuUp = 17,
+		MenuDown = 18,
 	};
 
 	//setup helpers
@@ -328,6 +350,7 @@ private:
 	void ChargeProjectile(bool isBomb = false);
 	void HandleEnemies();
 	void HandleTimers();
+	void SetGameOver(bool hasPlayerWon);
 
 	//debug
 	void HandlePrint(const ElementTypes currentMagic) const;

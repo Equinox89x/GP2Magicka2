@@ -49,8 +49,10 @@ public:
 	void SetOnTriggerCallBack(PhysicsCallback callback);
 	void SetVisibility(bool isVisible) { IsVisible = isVisible; };
 
-	std::list<GameObject*> GetObjectsInRange() { return m_OtherObjectsInRange; };
-	std::list<GameObject*> GetEnemiesInRange() { return m_EnemiesInRange; };
+	std::list<GameObject*>& GetObjectsInRange() { return m_OtherObjectsInRange; };
+	std::list<GameObject*>& GetEnemiesInRange() { return m_EnemiesInRange; };
+	int GetNrOfComponents() { return int(m_pComponents.size()); };
+	bool GetMarkedForDestroy() { return MarkedForDestroy; };
 
 #pragma region
 	template <class T>
@@ -183,7 +185,7 @@ private:
 	TransformComponent* m_pTransform{};
 	PhysicsCallback m_OnTriggerCallback{};
 	std::wstring m_Tag{};
-	bool IsVisible{ true };
+	bool IsVisible{ true }, MarkedForDestroy{ false };
 
 	std::list<GameObject*> m_EnemiesInRange{};
 	std::list<GameObject*> m_OtherObjectsInRange{ };

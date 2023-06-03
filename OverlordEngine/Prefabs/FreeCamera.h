@@ -21,4 +21,5 @@ private:
 	float m_TotalPitch{}, m_TotalYaw{};
 	float m_MoveSpeed{10.f}, m_RotationSpeed{10.f}, m_SpeedMultiplier{10.f};
 	CameraComponent* m_pCamera{};
+
 };

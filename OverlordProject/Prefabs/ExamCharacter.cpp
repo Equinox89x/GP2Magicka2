@@ -29,19 +29,21 @@ void ExamCharacter::Update(const SceneContext& sceneContext)
 	bool shiftPressed{ false };
 	HandleInput(sceneContext, shiftPressed);
 
-	ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
-	scene->ToggleUIElements(shiftPressed);
+	if (!IsPaused) {
+		ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
+		scene->ToggleUIElements(shiftPressed);
 
-	HandleRotation(sceneContext, look, epsilon, newRot);
+		HandleRotation(sceneContext, look, epsilon, newRot);
 
-	HandleMove(sceneContext, newRot, epsilon);
+		HandleMove(sceneContext, newRot, epsilon);
 
-	if (CanTakeDamage) {
-		DamageTimer -= deltaTime;
-		if (DamageTimer <= 0) {
-			m_Health -= DamageToTake;
-			std::cout << "Damage Taken: " << DamageToTake << ", Remaining Health: " << m_Health << "\n";
-			DamageTimer = 1;
+		if (CanTakeDamage) {
+			DamageTimer -= deltaTime;
+			if (DamageTimer <= 0) {
+				m_Health -= DamageToTake;
+				std::cout << "Damage Taken: " << DamageToTake << ", Remaining Health: " << m_Health << "\n";
+				DamageTimer = 1;
+			}
 		}
 	}
 }
@@ -78,19 +80,13 @@ void ExamCharacter::HandleRotation(const SceneContext& sceneContext, DirectX::XM
 			look = look1;
 			yaw = -atan2(look.y, look.x);
 		}
+		newRot = XMFLOAT3{ originalRotation.x, yaw, originalRotation.z };
 	}
 	else{
-		//rotate character to mouse pos
-		//get position of mouse in world
-		auto lookPosition{ sceneContext.pCamera->PickPosition() };
-		//get rotation of character to mouse position in world
-		XMVECTOR direction = XMVectorSubtract(XMLoadFloat3(&lookPosition), XMLoadFloat3(&originalLocation));
-		yaw = std::atan2(XMVectorGetX(direction), XMVectorGetZ(direction));
-
+		newRot = MathHelper::GetRotationTowardsPoint(originalLocation, sceneContext.pCamera->PickPosition(), originalRotation, false);
 	}
 
 	//apply rotation to character
-	newRot = XMFLOAT3{ originalRotation.x, yaw, originalRotation.z };
 	GetComponent<ModelComponent>()->GetTransform()->Rotate(newRot, false);
 	//}
 
@@ -125,59 +121,96 @@ void ExamCharacter::CalculateForwardMovement(const float& epsilon)
 	XMFLOAT3 displacement;
 	XMVECTOR displacementVec = XMVectorScale(XMLoadFloat3(&forward), 1.f);
 	XMStoreFloat3(&displacement, displacementVec);
-	GetComponent<ControllerComponent>()->Move(displacement, epsilon);
+	if (!IsPaused) GetComponent<ControllerComponent>()->Move(displacement, epsilon);
 }
 
 void ExamCharacter::HandleInput(const SceneContext& sceneContext, bool& shiftPressed)
 {
+	//menu
+	ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
+	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_Menu)) {
+		//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
+		if (scene->GetGameOver()) {
+			scene->ResetGame();
+		}
+		else {
+			if (scene->GetIsStartSelected()) {
+				scene->StartGame();
+			}
+			else {
+				PostQuitMessage(0);
+			}
+		}
+	}	
+	
+	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_MenuUp)) {
+		//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
+		if(scene->GetIsInMenu()) scene->SetIsStartSelected(true);
+	}	
+	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_MenuDown)) {
+		//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
+		if (scene->GetIsInMenu()) scene->SetIsStartSelected(false);
+	}
 
+	//game
 	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_SwitchElement)) {
 		shiftPressed = true;
 	}
+	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_ElementLeft)) {
+		//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
+		if (scene->GetIsInMenu()) {
+			if (scene->GetIsStartSelected()) {
+				scene->StartGame();
+			}
+			else {
+				// exit game
+			}
+		}
+		else {
+			scene->HandleCombobarFilling(shiftPressed ? ElementTypes::EARTH : ElementTypes::SHIELD);
+		}
+	}
+
+	if (IsPaused) return;
 
 	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_ElementBottom)) {
-		ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
+		//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
 		scene->HandleCombobarFilling(shiftPressed ? ElementTypes::LIGHTNING : ElementTypes::WATER);
 	}
-	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_ElementLeft)) {
-		ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
-		scene->HandleCombobarFilling(shiftPressed ? ElementTypes::EARTH : ElementTypes::SHIELD);
-	}
 	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_ElementTop)) {
-		ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
+		//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
 		scene->HandleCombobarFilling(shiftPressed ? ElementTypes::ARCANE : ElementTypes::LIFE);
 	}
 	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_ElementRight)) {
-		ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
+		//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
 		scene->HandleCombobarFilling(shiftPressed ? ElementTypes::FIRE : ElementTypes::COLD);
 	}
 	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_AoEAttack)) {
-		ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
+		//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
 		scene->ExecuteAOE();
 	}
 	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_SelfCast)) {
-		ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
+		//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
 		scene->ExecuteSelfCast();
 	}
 	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_SwordInput)) {
-		ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
+		//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
 		scene->ExecuteSword();
 	}
 
 	if (!sceneContext.pInput->IsGamepadConnected(GamepadIndex::playerOne)) {
 		if (sceneContext.pInput->IsMouseButton(InputState::down, 2)) {
-			ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
+			//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
 			scene->ExecuteMagicCombo();
 		}
 		if (sceneContext.pInput->IsMouseButton(InputState::released, 2)) {
-			ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
+			//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
 			scene->FireProjectile();
 			scene->ResetCombo();
 		}
 	}
 	else {
 		auto look = sceneContext.pInput->GetThumbstickPosition(false);
-		ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
 
 		if (abs(look.x) > 0.01f || abs(look.y) > 0.01f) {
 			scene->ExecuteMagicCombo();

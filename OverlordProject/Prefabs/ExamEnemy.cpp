@@ -12,19 +12,14 @@ ExamEnemy::ExamEnemy(const CharacterDescExtended& characterDesc, XMFLOAT3 postit
 
 void ExamEnemy::Initialize(const SceneContext& sceneContext)
 {
-	//auto go{ new GameObject() };
-	//AddChild(go);
-	//m_pControllerComponent = AddComponent(new ControllerComponent(m_CharacterDescExtended.controller));
 	GetTransform()->Translate(PostitionOffset);
 
-	/*m_pMaterial = MaterialManager::Get()->CreateMaterial<DiffuseMaterial>();
-	m_pMaterial->SetDiffuseTexture(L"Textures/Chair_Dark.dds");
-	m_pDefaultMaterial = PxGetPhysics().createMaterial(0.5f, 0.5f, 0.5f);*/
 	InitializeChild(sceneContext);
 }
 
 void ExamEnemy::Update(const SceneContext& sceneContext)
 {
+	if (IsPaused) return;
 	float deltaTime = sceneContext.pGameTime->GetElapsed();
 	//constexpr float epsilon{ 0.01f };
 
@@ -38,55 +33,33 @@ void ExamEnemy::Update(const SceneContext& sceneContext)
 			DamageTimer -= deltaTime;
 		}
 	}
-	//if (m_Health <= 0) {
-	//	RemoveChild(GetChild<GameObject>(), true);
-	//}
 
-	/*if (CanShoot) {
-		if (ShootTimer <= 0) {
-			FireProjectile();
-			ShootTimer = DefaultShootTimer;
-		}
-		else {
-			ShootTimer -= deltaTime;
-		}
-	}*/
 
 	auto originalRotation{ GetTransform()->GetWorldRotation() };
 	auto originalLocation{ GetTransform()->GetWorldPosition() };
-
 	auto lookPosition{ m_pCharacter->GetTransform()->GetWorldPosition() };
-	XMVECTOR direction = XMVectorSubtract(XMLoadFloat3(&lookPosition), XMLoadFloat3(&originalLocation));
-	float yaw = std::atan2(XMVectorGetX(direction), XMVectorGetZ(direction));
-	XMFLOAT3 newRot = XMFLOAT3{ originalRotation.x, yaw, originalRotation.z };
+
+	XMFLOAT3 newRot = MathHelper::GetRotationTowardsPoint(originalLocation, lookPosition, originalRotation, false);
 	GetComponent<ModelComponent>()->GetTransform()->Rotate(newRot, false);
 
 	if (CanMove) {
 		//get forward vector
-		XMFLOAT3 forward{ GetTransform()->GetForward() };
-		originalLocation.x += forward.x * (deltaTime * m_CharacterDescExtended.maxMoveSpeed);
-		originalLocation.z += forward.z * (deltaTime * m_CharacterDescExtended.maxMoveSpeed);
-
 		if (!MathHelper::IsPointInCircle3D(originalLocation, lookPosition, 25)) {
+			XMFLOAT3 forward{ GetTransform()->GetForward() };
+			originalLocation.x += forward.x * (deltaTime * m_CharacterDescExtended.maxMoveSpeed);
+			originalLocation.z += forward.z * (deltaTime * m_CharacterDescExtended.maxMoveSpeed);
 			GetTransform()->Translate(originalLocation);
 		}
 	}
 
 	for (auto projectile : GetChildren<Projectile>()) {
 		if (projectile->IsMarkedForDelete()) {
-			//m_Projectiles.erase(std::remove(m_Projectiles.begin(), m_Projectiles.end(), projectile));
 			RemoveChild(projectile, true);
 		}
 	}
-
 	UpdateChild(sceneContext);
-}
 
-//void ExamEnemy::FireProjectile()
-//{
-//	//m_Projectiles.push_back(AddChild(new Projectile(L"Meshes/Rock.ovm", GetTransform()->GetForward(), XMFLOAT3{0,0,0}, 1000, m_pMaterial, m_pDefaultMaterial)));
-//	AddChild(new Projectile(L"Meshes/Rock.ovm", GetTransform()->GetForward(), XMFLOAT3{ 0,0,0 }, 500, 1, m_pMaterial, m_pDefaultMaterial));
-//}
+}
 
 void ExamEnemy::DrawImGui()
 {

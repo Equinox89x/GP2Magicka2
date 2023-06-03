@@ -1,10 +1,10 @@
 #pragma once
-#include <Materials/DiffuseMaterial.h>
+#include <Materials/Shadow/DiffuseMaterial_Shadow.h>
 
 class Projectile : public GameObject
 {
 public:
-	Projectile(std::wstring assetFile, XMFLOAT3 forwardVector, XMFLOAT3 initialPosition, float launchSpeed, float downWardsVelocity, DiffuseMaterial* pMaterial, PxMaterial* pColliderMaterial, bool isBomb = false);
+	Projectile(std::wstring assetFile, XMFLOAT3 forwardVector, XMFLOAT3 initialPosition, float launchSpeed, float downWardsVelocity, DiffuseMaterial_Shadow* pMaterial, PxMaterial* pColliderMaterial, bool isBomb = false);
 	~Projectile() override = default;
 
 	Projectile(const Projectile& other) = delete;
@@ -26,7 +26,7 @@ private:
 	XMFLOAT3 m_ForwardVector;
 	XMFLOAT3 m_InitialPosition;
 	float m_LaunchSpeed, m_DownWardsVelocity;
-	DiffuseMaterial* m_pMaterial{};
+	DiffuseMaterial_Shadow* m_pMaterial{};
 	PxMaterial* m_pColliderMaterial{};
 	GameObject* m_Collider;
 	std::list<GameObject*> m_CharactersInRange;

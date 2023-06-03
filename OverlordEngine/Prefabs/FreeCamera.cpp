@@ -61,6 +61,6 @@ void FreeCamera::Update(const SceneContext& sceneContext)
 		m_TotalPitch += look.y * m_RotationSpeed * elapsedTime;
 
 		//GetTransform()->Rotate(m_TotalPitch, m_TotalYaw, 0);
-		GetTransform()->Translate(currPos);
+		//GetTransform()->Translate(currPos);
 	}
 }
