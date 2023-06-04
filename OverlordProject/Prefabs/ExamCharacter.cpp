@@ -14,8 +14,6 @@ void ExamCharacter::Initialize(const SceneContext& /*sceneContext*/)
 {
 	//Controller
 	m_pControllerComponent = AddComponent(new ControllerComponent(m_CharacterDescExtended.controller));
-
-	//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
 }
 
 void ExamCharacter::Update(const SceneContext& sceneContext)
