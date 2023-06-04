@@ -105,6 +105,12 @@ void ModelAnimator::SetAnimation(const std::wstring& clipName)
 
 void ModelAnimator::SetAnimation(UINT clipNumber)
 {
+	bool isAnimating{ false };
+	if (m_CurrentClip.name == GetClip(clipNumber).name) {
+		isAnimating = IsPlaying();
+	}
+	if (isAnimating) return;
+
 	m_ClipSet = false;
 	if (clipNumber < m_pMeshFilter->m_AnimationClips.size())
 	{

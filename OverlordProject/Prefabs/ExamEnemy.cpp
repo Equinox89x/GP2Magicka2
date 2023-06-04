@@ -19,7 +19,6 @@ void ExamEnemy::Initialize(const SceneContext& sceneContext)
 
 void ExamEnemy::Update(const SceneContext& sceneContext)
 {
-	if (IsPaused) return;
 	float deltaTime = sceneContext.pGameTime->GetElapsed();
 	//constexpr float epsilon{ 0.01f };
 

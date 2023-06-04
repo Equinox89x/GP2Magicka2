@@ -11,13 +11,17 @@
 #include <Materials/Shadow/DiffuseMaterial_Shadow.h>
 #include <Materials/DiffuseMaterial_Skinned.h>
 
-
-
 class ExamCharacter;
 class ExamRangedCharacter;
 class EnemyMeleeCharacter;
 
 #pragma region enums & structs
+//enum class MenuItems {
+//	ToMenu = 0,
+//	Restart = 1,
+//	Exit = 2
+//};
+
 enum ElementTypes : char
 {
 	WATER = 'W',
@@ -226,28 +230,13 @@ public:
 	void ExecuteSword();
 	void FireProjectile(bool isBomb = false);
 	void FireProjectileBarage();
-
-	void SetIsInMenu(bool isInMenu) { IsInMenu = isInMenu; };
-	bool GetIsInMenu() { return IsInMenu; };	
-	bool GetGameOver() { return IsGameOver; };	
-	void SetIsStartSelected(bool isStartSelected);
-	bool GetIsStartSelected() { return IsStartSelected; };
-	void StartGame();
-
-	void SetPaused(bool isPaised);
 	void ResetGame();
 
 protected:
 	void Initialize() override;
-	void SetStartPos();
 	void OnGUI() override;
 	void Update() override;
-	void HandleMagicTransform();
-	void HandleCameraMovement();
-	void HandleUIMovement(const XMFLOAT3 pos);
-	void HandleEmitterMovement(XMFLOAT3 pos);
 	void Draw() override;
-	void PostDraw() override;
 
 private:
 	//setup
@@ -271,8 +260,7 @@ private:
 	GameObject* m_pSprayDamageColliderContainer{ nullptr };
 	GameObject* m_pProjectileHolder{ nullptr };
 	GameObject* m_pEnemyHolder{ nullptr };
-	GameObject* m_pMenu{ nullptr };
-	GameObject* m_pWinLoseScreen{ nullptr };
+
 	DiffuseMaterial_Skinned* m_pMaterial{};
 	DiffuseMaterial_Shadow* m_pLevelMaterial{};
 	std::vector<std::wstring> m_Textures{};
@@ -307,7 +295,7 @@ private:
 	bool IsExecutingMagic{ false }, IsChargingProjectile{ false }, IsShootingIceProjectile, IsBombProjectile;
 	bool AoeFired{ false };
 	float AoeTimer{ 2 }, ProjectileTimer{ 0 }, MaxProjectileTimer{ 5 }, MaxIceProjectileTimer{ 0.2f };
-	bool IsGameOver{ false }, HasWon{ false }, IsInMenu{ true }, IsStartSelected{ true };
+	bool IsGameOver{ false };
 
 	//input
 	enum InputIds
@@ -328,9 +316,7 @@ private:
 		SwordInput = 13,
 		SelfCast = 14,
 		AoEAttack = 15,
-		Menu = 16,
-		MenuUp = 17,
-		MenuDown = 18,
+		InGameMenu = 16,
 	};
 
 	//setup helpers
@@ -341,7 +327,9 @@ private:
 	void CreateEmitters();
 	void CreateUI();
 	void CreateDamager();
-	void CreateEnemies();
+	void CreateMeleeEnemies(float width, XMFLOAT3 position, int nrOfEnemies);
+	void CreateRangedEnemies(float width, XMFLOAT3 position, int nrOfEnemies);
+	void CreateSound();
 	void DefineCameraSpline();
 
 	//magic helper functions
@@ -350,9 +338,16 @@ private:
 	void FillMagicResultData();
 
 	void ChargeProjectile(bool isBomb = false);
+	void SetGameOver(bool hasPlayerWon);
+
+	void SetStartPos();
 	void HandleEnemies();
 	void HandleTimers();
-	void SetGameOver(bool hasPlayerWon);
+	void HandleMagicTransform();
+	void HandleCameraMovement();
+	void HandleUIMovement(const XMFLOAT3 pos);
+	void HandleEmitterMovement(XMFLOAT3 pos);
+
 
 	//debug
 	void HandlePrint(const ElementTypes currentMagic) const;

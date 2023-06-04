@@ -47,9 +47,7 @@ struct CharacterDescExtended
 	int actionId_SelfCast{ -1 };
 	int actionId_SwordInput{-1};
 
-	int actionId_Menu{ -1 };
-	int actionId_MenuUp{ -1 };
-	int actionId_MenuDown{ -1 };
+	int actionId_InGameMenu{ -1 };
 
 };
 
@@ -68,7 +66,6 @@ public:
 
 	void DamagePlayer(bool canTakeDamage, float damage);
 	float GetHealth() { return m_Health; };
-	void SetPaused(bool isPaused) { IsPaused = isPaused; };
 
 protected:
 	void Initialize(const SceneContext&) override;
@@ -78,13 +75,12 @@ protected:
 
 	void HandleMove(const SceneContext& sceneContext, DirectX::XMFLOAT3& newRot, const float& epsilon);
 
-	void CalculateForwardMovement(const float& epsilon);
+	void CalculateForwardMovement(const float& epsilon, const SceneContext& sceneContext);
 
 	void HandleInput(const SceneContext& sceneContext, bool& shiftPressed);
 
 private:
 	ControllerComponent* m_pControllerComponent{};
-	//GameScene* Scene{ nullptr };
 	CharacterDescExtended m_CharacterDescExtended;
 	float m_TotalPitch{}, m_TotalYaw{};				//Total camera Pitch(X) and Yaw(Y) rotation
 	float m_MoveAcceleration{},						//Acceleration required to reach maxMoveVelocity after 1 second (maxMoveVelocity / moveAccelerationTime)
@@ -96,9 +92,8 @@ private:
 	bool WasPressed{ false }, CanTakeDamage{ false };
 	float m_Health{ 3000 };
 	float DamageToTake{ 0 }, DamageTimer{ 1 };
-	bool IsPaused{ false };
-	//ModelAnimator* Animator;
 	bool CanWalk{ true };
-
+	float ButtonTimer{ 0.2f };
+	bool CanButton{ true };
 };
 

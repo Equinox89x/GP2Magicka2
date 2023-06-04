@@ -15,6 +15,8 @@ public:
 	GameScene* GetActiveScene() const { return m_ActiveScene; }
 	const SceneContext& GetActiveSceneContext() const { return m_ActiveScene->GetSceneContext(); }
 	SceneSettings& GetActiveSceneSettings() const { return m_ActiveScene->GetSceneSettings(); }
+	bool RestartTriggered{ false };
+	bool HasWon{ true };
 
 protected:
 	void Initialize() override;

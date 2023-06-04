@@ -17,6 +17,7 @@ public:
 	XMFLOAT3 GetPointToFollow() { return PointToFollow; };
 	XMFLOAT3 GetProjectedLinePoint() { return ProjectedLinePoint; };
 	XMFLOAT3 GetProjectedPoint() { return ProjectedPoint; };
+	Line GetLineOfIndex(int id) { return m_LinePoints[id]; };
 
 	void Draw(const SceneContext& sceneContext) override;
 

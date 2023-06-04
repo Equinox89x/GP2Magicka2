@@ -2,6 +2,7 @@
 #include "ExamCharacter.h"
 #include "../OverlordEngine/Prefabs/MagickaCamera.h"
 #include "./Scenes/Exam/ExamTestClass.h"
+#include <Scenes/Exam/Menu.h>
 
 ExamCharacter::ExamCharacter(const CharacterDescExtended& characterDesc) :
 	m_CharacterDescExtended{ characterDesc },
@@ -21,6 +22,16 @@ void ExamCharacter::Update(const SceneContext& sceneContext)
 {
 	auto Animator = GetComponent<ModelComponent>()->GetAnimator();
 	float deltaTime = sceneContext.pGameTime->GetElapsed();
+
+	if (!CanButton) {
+		ButtonTimer -= deltaTime;
+		if (ButtonTimer <= 0) {
+			ButtonTimer = 0.2f;
+			CanButton = true;
+		}
+	}
+
+
 	CanWalk = true;
 	//## Input Gathering (move, look, rotation)
 	XMFLOAT2 look{ 0.f, 0.f };
@@ -30,34 +41,25 @@ void ExamCharacter::Update(const SceneContext& sceneContext)
 	bool shiftPressed{ false };
 	HandleInput(sceneContext, shiftPressed);
 
-	if (!IsPaused) {
-		ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
-		scene->ToggleUIElements(shiftPressed);
+	ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
+	scene->ToggleUIElements(shiftPressed);
 
-		HandleRotation(sceneContext, look, epsilon, newRot);
+	HandleRotation(sceneContext, look, epsilon, newRot);
 
-		HandleMove(sceneContext, newRot, epsilon);
+	HandleMove(sceneContext, newRot, epsilon);
 
-		if (CanTakeDamage) {
-			DamageTimer -= deltaTime;
-			if (DamageTimer <= 0) {
-				m_Health -= DamageToTake;
-				std::cout << "Damage Taken: " << DamageToTake << ", Remaining Health: " << m_Health << "\n";
-				DamageTimer = 1;
-			}
+	if (CanTakeDamage) {
+		DamageTimer -= deltaTime;
+		if (DamageTimer <= 0) {
+			m_Health -= DamageToTake;
+			std::cout << "Damage Taken: " << DamageToTake << ", Remaining Health: " << m_Health << "\n";
+			DamageTimer = 1;
 		}
 	}
 
 	if (!CanWalk) return;
-	bool isAnimating{ false };
-	if (Animator->GetClip(0).name == Animator->GetClipName()) {
-		isAnimating = Animator->IsPlaying();
-	}
-	if (!isAnimating) {
-		Animator->SetAnimation(0);
-		Animator->Play();
-	}
-
+	Animator->SetAnimation(0);
+	Animator->Play();
 }
 
 float MapRange(float value, float inputMin, float inputMax, float outputMin, float outputMax) {
@@ -94,7 +96,7 @@ void ExamCharacter::HandleRotation(const SceneContext& sceneContext, DirectX::XM
 		}
 		newRot = XMFLOAT3{ originalRotation.x, yaw, originalRotation.z };
 	}
-	else{
+	else {
 		newRot = MathHelper::GetRotationTowardsPoint(originalLocation, sceneContext.pCamera->PickPosition(), originalRotation, false);
 	}
 
@@ -109,7 +111,7 @@ void ExamCharacter::HandleMove(const SceneContext& sceneContext, DirectX::XMFLOA
 	if (!sceneContext.pInput->IsGamepadConnected(GamepadIndex::playerOne)) {
 		if (sceneContext.pInput->IsMouseButton(InputState::down, 1))
 		{
-			CalculateForwardMovement(epsilon);
+			CalculateForwardMovement(epsilon, sceneContext);
 		}
 	}
 	else {
@@ -117,15 +119,19 @@ void ExamCharacter::HandleMove(const SceneContext& sceneContext, DirectX::XMFLOA
 		if (abs(look.x) > epsilon || abs(look.y) > epsilon) {
 			//when using controller, your left thumbstick defines rotation and moving
 			//your right thumbstick defines rotation alone and takes priority over the rotation of the left stick.
-			CalculateForwardMovement(epsilon);
+			CalculateForwardMovement(epsilon, sceneContext);
 		}
 	}
 }
 
-void ExamCharacter::CalculateForwardMovement(const float& epsilon)
+void ExamCharacter::CalculateForwardMovement(const float& epsilon, const SceneContext& sceneContext)
 {
 	//get forward vector
+	float deltaTime = sceneContext.pGameTime->GetElapsed();
+
 	XMFLOAT3 forward{ GetTransform()->GetForward() };
+	forward.x *= deltaTime * 70;
+	forward.z *= deltaTime * 70;
 	m_CurrentDirection = forward;
 
 	//calculate point to move to (based on forward vector coming from mouse rotation)
@@ -134,134 +140,63 @@ void ExamCharacter::CalculateForwardMovement(const float& epsilon)
 	XMStoreFloat3(&displacement, displacementVec);
 
 	auto Animator = GetComponent<ModelComponent>()->GetAnimator();
-	bool isAnimating{ false };
-	if (Animator->GetClip(3).name == Animator->GetClipName()) {
-		isAnimating = Animator->IsPlaying();
-	}
-	if (!isAnimating) {
-		Animator->SetAnimation(3);
-		Animator->Play();
-		CanWalk = false;
-		std::cout << "nope";
-	}
-	else {
-		CanWalk = false;
-	}
+	Animator->SetAnimation(3);
+	Animator->Play();
+	CanWalk = false;
 
-	if (!IsPaused) GetComponent<ControllerComponent>()->Move(displacement, epsilon);
+	GetComponent<ControllerComponent>()->Move(displacement, epsilon);
 }
 
 void ExamCharacter::HandleInput(const SceneContext& sceneContext, bool& shiftPressed)
 {
 	//menu
 	ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
-	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_Menu)) {
-		//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
-		if (scene->GetGameOver()) {
-			scene->ResetGame();
-		}
-		else {
-			if (scene->GetIsStartSelected()) {
-				scene->StartGame();
-			}
-			else {
-				PostQuitMessage(0);
-			}
-		}
-	}	
-	
-	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_MenuUp)) {
-		//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
-		if(scene->GetIsInMenu()) scene->SetIsStartSelected(true);
-	}	
-	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_MenuDown)) {
-		//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
-		if (scene->GetIsInMenu()) scene->SetIsStartSelected(false);
-	}
 
+	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_InGameMenu)) {
+		if (CanButton) {
+			SceneManager::Get()->SetActiveGameScene(L"GameMenu");
+			CanButton = false;
+		}
+	}
 	//game
 	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_SwitchElement)) {
 		shiftPressed = true;
 	}
 	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_ElementLeft)) {
-		//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
-		if (scene->GetIsInMenu()) {
-			if (scene->GetIsStartSelected()) {
-				scene->StartGame();
-			}
-			else {
-				// exit game
-			}
-		}
-		else {
-			scene->HandleCombobarFilling(shiftPressed ? ElementTypes::EARTH : ElementTypes::SHIELD);
-		}
+		scene->HandleCombobarFilling(shiftPressed ? ElementTypes::EARTH : ElementTypes::SHIELD);
 	}
 
-	if (IsPaused) return;
 	auto Animator = GetComponent<ModelComponent>()->GetAnimator();
 	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_ElementBottom)) {
-		//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
 		scene->HandleCombobarFilling(shiftPressed ? ElementTypes::LIGHTNING : ElementTypes::WATER);
 	}
 	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_ElementTop)) {
-		//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
 		scene->HandleCombobarFilling(shiftPressed ? ElementTypes::ARCANE : ElementTypes::LIFE);
 	}
 	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_ElementRight)) {
-		//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
 		scene->HandleCombobarFilling(shiftPressed ? ElementTypes::FIRE : ElementTypes::COLD);
 	}
 	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_AoEAttack)) {
-		//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
 		scene->ExecuteAOE();
-
-
-		bool isAnimating{ false };
-		if (Animator->GetClip(1).name == Animator->GetClipName()) {
-			isAnimating = Animator->IsPlaying();
-		}
-		if (!isAnimating) {
-			Animator->SetAnimation(1);
-			Animator->Play();
-			CanWalk = false;
-		}
-		else {
-			CanWalk = false;
-		}
-
-
+		Animator->SetAnimation(1);
+		Animator->Play();
+		CanWalk = false;
 	}
 	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_SelfCast)) {
-		//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
 		scene->ExecuteSelfCast();
 	}
 	if (sceneContext.pInput->IsActionTriggered(m_CharacterDescExtended.actionId_SwordInput)) {
-		//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
 		scene->ExecuteSword();
 	}
 
 	if (!sceneContext.pInput->IsGamepadConnected(GamepadIndex::playerOne)) {
 		if (sceneContext.pInput->IsMouseButton(InputState::down, 2)) {
-			//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
 			scene->ExecuteMagicCombo();
-
-			bool isAnimating{ false };
-			if (Animator->GetClip(2).name == Animator->GetClipName()) {
-				isAnimating = Animator->IsPlaying();
-			}
-			if (!isAnimating) {
-				Animator->SetAnimation(2);
-				Animator->Play();
-				CanWalk = false;
-			}
-			else {
-				CanWalk = false;
-			}
-
+			Animator->SetAnimation(2);
+			Animator->Play();
+			CanWalk = false;
 		}
 		if (sceneContext.pInput->IsMouseButton(InputState::released, 2)) {
-			//ExamTestClass* scene{ reinterpret_cast<ExamTestClass*>(SceneManager::Get()->GetActiveScene()) };
 			scene->FireProjectile();
 			scene->ResetCombo();
 		}

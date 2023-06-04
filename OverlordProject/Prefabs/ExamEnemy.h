@@ -30,7 +30,6 @@ public:
 	//void SetCanShoot(bool canShoot) { CanShoot = canShoot; };
 	//void FireProjectile();
 
-	void SetPaused(bool isPaused) { IsPaused = isPaused; };
 	bool GetMarkedForDestroy() { return m_MarkedForDestroy; };
 	void SetMarkedForDestroy(bool isMarked) { m_MarkedForDestroy = isMarked; };
 
@@ -54,7 +53,7 @@ private:
 	float DamageTimer, DefaultDamageTimer{ 0.5f }/*, ShootTimer, DefaultShootTimer{ 3.f }*/;
 	bool CanDamage{ false }, CanMove{ true }, CanDamageAoE{ false }/*, CanShoot{ false }*/;
 	float DamageToTake, m_AttackDamage{ 100 };
-	bool IsPaused{ false }, m_MarkedForDestroy{ false };
+	bool m_MarkedForDestroy{ false };
 
 	XMFLOAT3 PostitionOffset;
 

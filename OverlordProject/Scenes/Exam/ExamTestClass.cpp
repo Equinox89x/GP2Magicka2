@@ -6,7 +6,6 @@
 #include <unordered_set>
 #include <Prefabs/Projectile.h>
 
-#pragma region Setup
 void ExamTestClass::Initialize()
 {
 
@@ -29,7 +28,6 @@ void ExamTestClass::Initialize()
 	m_pLevelMaterial->SetDiffuseTexture(L"Textures/level.dds");
 
 	CreateMagic();
-	m_ComboBar.reserve(5);
 	
 	CreateLevel();
 
@@ -37,51 +35,49 @@ void ExamTestClass::Initialize()
 
 	CreateDamager();
 
-	CreateEnemies();
+	DefineCameraSpline();
+
+	m_pEnemyHolder = AddChild(new GameObject());
+	m_pProjectileHolder = AddChild(new GameObject());
+	float width{ 50 };
+	int nrOfMelee{ 5 };
+	int nrOfRanged{ 0 };
+	auto position{ m_pCamera->GetLineOfIndex(0).points[1] };
+	CreateMeleeEnemies(width, position, nrOfMelee);
+	width = 50;
+	position = m_pCamera->GetLineOfIndex(2).points[1];
+	position.z -= 300;
+	nrOfRanged = 2;
+	CreateMeleeEnemies(width, position, nrOfMelee);
+	position.z += 50;
+	CreateRangedEnemies(width, position, nrOfRanged);
+	width = 50;
+	position = m_pCamera->GetLineOfIndex(2).points[1];
+	position.x += 300;
+	position.z += 300;
+	nrOfRanged = 5;
+	CreateMeleeEnemies(width, position, nrOfMelee);
+	position.x -= 100;
+	position.z -= 50;
+	CreateRangedEnemies(width, position, nrOfRanged);
 
 	CreateInput();
 
 	CreateEmitters();
 
-	DefineCameraSpline();
-
 	SetStartPos();
-
-	m_pCameraComponent->GetTransform()->Translate(300, 400, -100);
 
 	CreateUI();
 
 	ResetCombo();
 
-	m_SceneContext.pLights->SetDirectionalLight({ -95.6139526f,66.1346436f,-41.1850471f }, { 0.740129888f, -0.597205281f, 0.309117377f });
+	CreateMenu();
 
+	CreateSound();
 
-	auto go2{ new GameObject() };
-	m_pMenu = AddChild(go2);
-	m_pMenu->AddComponent(new SpriteComponent(L"Textures/Magicka/Menu_Start.png"));
-
-	auto go{ new GameObject() };
-	m_pWinLoseScreen = AddChild(go);
-	m_pWinLoseScreen->AddComponent(new SpriteComponent(L"Textures/Magicka/Game_Won.png"));
-
-	m_pWinLoseScreen->SetVisibility(false);
-	m_pMenu->SetVisibility(true);
-	m_pUI->SetVisibility(false);
-	m_pUI2->SetVisibility(false);
-	m_pUI3->SetVisibility(false);
-	SetPaused(true);
-
-	SoundSystem = SoundManager::Get()->GetSystem();
-	auto file{ ContentManager::GetFullAssetPath(L"Sound/fire.wav") };
-	SoundSystem->createSound(file.string().c_str(), FMOD_DEFAULT, nullptr, &FireSound);
-	file = ContentManager::GetFullAssetPath(L"Sound/laser.wav");
-	SoundSystem->createSound(file.string().c_str(), FMOD_DEFAULT, nullptr, &LaserSound);
-	file = ContentManager::GetFullAssetPath(L"Sound/aoe.mp3");
-	SoundSystem->createSound(file.string().c_str(), FMOD_DEFAULT, nullptr, &AoeSound);
-	file = ContentManager::GetFullAssetPath(L"Sound/projectile.wav");
-	SoundSystem->createSound(file.string().c_str(), FMOD_DEFAULT, nullptr, &ProjectileSound);
 }
 
+#pragma region Setup
 void ExamTestClass::SetStartPos()
 {
 	m_pCamera->CalculateStartPosition();
@@ -96,6 +92,9 @@ void ExamTestClass::SetStartPos()
 
 	m_pCameraComponent->GetTransform()->Rotate(47, -53, 0);
 	m_SceneContext.pCamera->GetTransform()->Rotate(47, -53, 0);
+
+	m_pCameraComponent->GetTransform()->Translate(300, 400, -100);
+	m_SceneContext.pLights->SetDirectionalLight({ -95.6139526f,66.1346436f,-41.1850471f }, { 0.740129888f, -0.597205281f, 0.309117377f });
 
 }
 
@@ -143,13 +142,7 @@ void ExamTestClass::CreateInput()
 	inputAction = InputAction(SelfCast, InputState::down, VK_LSHIFT, -1, XINPUT_GAMEPAD_RIGHT_SHOULDER);
 	m_SceneContext.pInput->AddInputAction(inputAction);
 
-	inputAction = InputAction(Menu, InputState::down, VK_SPACE, -1);
-	m_SceneContext.pInput->AddInputAction(inputAction);
-
-	inputAction = InputAction(MenuUp, InputState::down, VK_UP, -1, XINPUT_GAMEPAD_DPAD_UP);
-	m_SceneContext.pInput->AddInputAction(inputAction);
-
-	inputAction = InputAction(MenuDown, InputState::down, VK_DOWN, -1, XINPUT_GAMEPAD_DPAD_DOWN);
+	inputAction = InputAction(InGameMenu, InputState::down, VK_ESCAPE, -1, XINPUT_GAMEPAD_START);
 	m_SceneContext.pInput->AddInputAction(inputAction);
 }
 
@@ -167,17 +160,14 @@ void ExamTestClass::CreateCharacter()
 	characterDesc.actionId_SelfCast = SelfCast;
 	characterDesc.actionId_SwordInput = SwordInput;
 
-	characterDesc.actionId_Menu = Menu;
-	characterDesc.actionId_MenuDown = MenuDown;
-	characterDesc.actionId_MenuUp = MenuUp;
-
+	characterDesc.actionId_InGameMenu = InGameMenu;
 	characterDesc.actionId_Move = Move;
 	characterDesc.actionId_Execute = Execute;
 
 	characterDesc.maxMoveSpeed = 35;
 
 	m_pCharacter = AddChild(new ExamCharacter(characterDesc));
-	m_pCharacter->GetTransform()->Translate(-50.f, 5.f, 100.f);
+	m_pCharacter->GetTransform()->Translate(-50.f, 5.f, -350.f);
 	m_pCharacter->AddComponent(new ModelComponent(L"Meshes/wizard.ovm", true));
 	m_pCharacter->GetComponent<ModelComponent>()->SetMaterial(m_pMaterial);
 	m_pCharacter->GetComponent<ModelComponent>()->GetTransform()->Rotate(0,90,0);
@@ -231,73 +221,72 @@ void ExamTestClass::CreateDamager() {
 
 	m_pPlayerMaxEnemyRangeCollider->SetOnTriggerCallBack([&](GameObject* /*pTriggerObject*/, GameObject* pOtherObject, PxTriggerAction action)
 	{
-			if (action == PxTriggerAction::ENTER)
-			{
-				if (auto enemy{ dynamic_cast<ExamRangedCharacter*>(pOtherObject) }) {
-					enemy->SetCanMove(false);
-					enemy->SetCanShoot(true);
-				}
+		if (action == PxTriggerAction::ENTER)
+		{
+			if (auto enemy{ dynamic_cast<ExamRangedCharacter*>(pOtherObject) }) {
+				enemy->SetCanMove(false);
+				enemy->SetCanShoot(true);
 			}
-	if (action == PxTriggerAction::LEAVE)
-	{
-		if (auto enemy{ dynamic_cast<ExamRangedCharacter*>(pOtherObject) }) {
-			enemy->SetCanMove(true);
-			enemy->SetCanShoot(false);
 		}
-	}
+		if (action == PxTriggerAction::LEAVE)
+		{
+			if (auto enemy{ dynamic_cast<ExamRangedCharacter*>(pOtherObject) }) {
+				enemy->SetCanMove(true);
+				enemy->SetCanShoot(false);
+			}
+		}
 	});
 }
 
-void ExamTestClass::CreateEnemies() {
+void ExamTestClass::CreateMeleeEnemies(float width, XMFLOAT3 position, int nrOfEnemies) {
 	CharacterDescExtended enemyDesc{ m_Material };
 	enemyDesc.maxMoveSpeed = 55;
-	m_pEnemyHolder = AddChild(new GameObject());
-	m_pProjectileHolder = AddChild(new GameObject());
 
-	float width{ 50 };
-	for (size_t i = 0; i < 5; i++)
+	for (size_t i = 0; i < nrOfEnemies; i++)
 	{
-		EnemyMeleeCharacter* enemy = new EnemyMeleeCharacter(enemyDesc, XMFLOAT3{ width, 5.f, -100 });
+		position.x += width;
+		EnemyMeleeCharacter* enemy = new EnemyMeleeCharacter(enemyDesc, position);
 		m_pEnemyHolder->AddChild(enemy);
 		enemy->AddComponent(new ModelComponent(L"Meshes/wizard.ovm", true));
 		enemy->GetComponent<ModelComponent>()->SetMaterial(m_pMaterial);
 
 		enemy->AddComponent(new RigidBodyComponent());
 		enemy->GetComponent<RigidBodyComponent>()->SetKinematic(true);
-		enemy->GetComponent<RigidBodyComponent>()->AddCollider(PxBoxGeometry{10,50,10}, *m_pDefaultMaterial);
-		enemy->GetComponent<RigidBodyComponent>()->AddCollider(PxBoxGeometry{10,50,10}, *m_pDefaultMaterial);
-		
+		enemy->GetComponent<RigidBodyComponent>()->AddCollider(PxBoxGeometry{ 10,50,10 }, *m_pDefaultMaterial);
+		enemy->GetComponent<RigidBodyComponent>()->AddCollider(PxBoxGeometry{ 10,50,10 }, *m_pDefaultMaterial);
+
 		auto colliderInfo = enemy->GetComponent<RigidBodyComponent>()->GetCollider(0);
 		colliderInfo.SetTrigger(true);
 
 		enemy->SetOnTriggerCallBack([&](GameObject* /*pTriggerObject*/, GameObject* pOtherObject, PxTriggerAction action)
+			{
+				if (action == PxTriggerAction::ENTER)
+				{
+					if (auto enemy{ dynamic_cast<ExamEnemy*>(pOtherObject) }) {
+						enemy->SetCanMove(false);
+					}
+				}
+		if (action == PxTriggerAction::LEAVE)
 		{
-			if (action == PxTriggerAction::ENTER)
-			{
-				if (auto enemy{ dynamic_cast<ExamEnemy*>(pOtherObject) }) {
-					enemy->SetCanMove(false);
-				}
+			if (auto enemy{ dynamic_cast<ExamEnemy*>(pOtherObject) }) {
+				enemy->SetCanMove(true);
 			}
-			if (action == PxTriggerAction::LEAVE)
-			{
-				if (auto enemy{ dynamic_cast<ExamEnemy*>(pOtherObject) }) {
-					enemy->SetCanMove(true);
-				}
-			}
-		});
+		}
+			});
 
 		enemy->m_pCharacter = m_pCharacter;
 		enemy->GetTransform()->Scale(0.5f);
 		width -= 30;
 	}
+}
 
+void ExamTestClass::CreateRangedEnemies(float width, XMFLOAT3 position, int nrOfEnemies) {
 	CharacterDescExtended enemyRangedDesc{ m_Material };
 	enemyRangedDesc.maxMoveSpeed = 55;
-
 	width = 50 ;
-	for (size_t i = 0; i < 5; i++)
+	for (size_t i = 0; i < nrOfEnemies; i++)
 	{
-		ExamRangedCharacter* enemy = new ExamRangedCharacter(enemyRangedDesc, XMFLOAT3{ width, 5.f, -150 });
+		ExamRangedCharacter* enemy = new ExamRangedCharacter(enemyRangedDesc, position);
 		m_pEnemyHolder->AddChild(enemy);
 		enemy->SetProjectileHolder(m_pProjectileHolder);
 		enemy->AddComponent(new ModelComponent(L"Meshes/wizard.ovm", true));
@@ -423,7 +412,7 @@ void ExamTestClass::CreateMagic()
 	for (int i = static_cast<int>(ElementTypes::NONE); i < static_cast<int>(ElementTypes::WATER); i++) {
 		m_PatternOptions += static_cast<ElementTypes>(i);
 	}
-	
+	m_ComboBar.reserve(5);
 }
 
 void ExamTestClass::CreateEmitters()
@@ -610,8 +599,8 @@ void ExamTestClass::CreateUI()
 
 void ExamTestClass::DefineCameraSpline() {
 	auto pos{ m_pCharacter->GetTransform()->GetPosition() };
-	auto pos1{ XMFLOAT3{pos.x + 20, pos.y + 10, pos.z - 550} };
-	auto pos2{ XMFLOAT3{ pos.x + 100, pos.y + 10, pos.z + 150 } };
+	auto pos1{ XMFLOAT3{pos.x + 20, pos.y + 10, pos.z - 100} };
+	auto pos2{ XMFLOAT3{ pos.x + 100, pos.y + 10, pos.z + 600 } };
 	auto pos3{ XMFLOAT3{ pos2.x + 50, pos.y + 10, pos2.z + 50 } };
 	auto pos4{ XMFLOAT3{ pos3.x + 620, pos.y + 10, pos3.z + 100 } };
 	auto pos5{ XMFLOAT3{ pos4.x + 300, pos.y + 10, pos4.z + 550 } };
@@ -628,6 +617,19 @@ void ExamTestClass::DefineCameraSpline() {
 	Sphere->GetTransform()->Translate(pos);
 	m_pCamera->InitPoints(lines);
 }
+
+void ExamTestClass::CreateSound() {
+	SoundSystem = SoundManager::Get()->GetSystem();
+	auto file{ ContentManager::GetFullAssetPath(L"Sound/fire.wav") };
+	SoundSystem->createSound(file.string().c_str(), FMOD_DEFAULT, nullptr, &FireSound);
+	file = ContentManager::GetFullAssetPath(L"Sound/laser.wav");
+	SoundSystem->createSound(file.string().c_str(), FMOD_DEFAULT, nullptr, &LaserSound);
+	file = ContentManager::GetFullAssetPath(L"Sound/aoe.mp3");
+	SoundSystem->createSound(file.string().c_str(), FMOD_DEFAULT, nullptr, &AoeSound);
+	file = ContentManager::GetFullAssetPath(L"Sound/projectile.wav");
+	SoundSystem->createSound(file.string().c_str(), FMOD_DEFAULT, nullptr, &ProjectileSound);
+
+}
 #pragma endregion
 
 void ExamTestClass::OnGUI()
@@ -635,7 +637,6 @@ void ExamTestClass::OnGUI()
 	m_pCharacter->DrawImGui();
 }
 
-#pragma region Update
 void ExamTestClass::Update()
 {
 	XMFLOAT3 pos2{ m_pCharacter->GetTransform()->GetWorldPosition()};
@@ -666,8 +667,14 @@ void ExamTestClass::Update()
 	//SoundSystem->update();
 
 	SoundManager::Get()->GetSystem()->update();
+
+	if (SceneManager::Get()->RestartTriggered) {
+		SceneManager::Get()->RestartTriggered = false;
+		ResetGame();
+	}
 }
 
+#pragma region Update
 void ExamTestClass::HandleTimers() {
 	float deltaTime = m_SceneContext.pGameTime->GetElapsed();
 
@@ -786,14 +793,7 @@ void ExamTestClass::HandleEnemies()
 }
 #pragma endregion
 
-#pragma region Draw
-void ExamTestClass::Draw()
-{
-	m_pCamera->Draw(SceneContext());
-}
-
-void ExamTestClass::PostDraw() {}
-#pragma endregion
+void ExamTestClass::Draw(){ m_pCamera->Draw(SceneContext()); }
 
 #pragma region Execution
 void ExamTestClass::ExecuteMagicCombo()
@@ -1264,56 +1264,70 @@ void ExamTestClass::HandlePrint2(Spells spell) const {
 #pragma endregion
 
 #pragma region Menu and start/end
-void ExamTestClass::StartGame() {
-	m_pWinLoseScreen->SetVisibility(false);
-	m_pMenu->SetVisibility(false);
-	m_pUI->SetVisibility(true);
-	m_pUI2->SetVisibility(true);
-	m_pUI3->SetVisibility(true);
-	SetIsInMenu(false);
-	SetPaused(false);
-}
-
-void ExamTestClass::SetPaused(bool isPaused) {
-	for (auto obj : m_pEnemyHolder->GetChildren<ExamEnemy>()) obj->SetPaused(isPaused);
-	m_pCharacter->SetPaused(isPaused);
-}
-
-void ExamTestClass::SetIsStartSelected(bool isStartSelected){
-	IsStartSelected = isStartSelected; 
-	if (IsStartSelected) {
-		m_pMenu->GetComponent<SpriteComponent>()->SetTexture(L"Textures/Magicka/Menu_Start.png");
-	}
-	else {
-		m_pMenu->GetComponent<SpriteComponent>()->SetTexture(L"Textures/Magicka/Menu_Exit.png");
-	}
-}
-
 void ExamTestClass::SetGameOver(bool hasWon) {
-	HasWon = hasWon;
-	IsGameOver = true;
-	SetPaused(true);
-
-	m_pWinLoseScreen->SetVisibility(true);
-	m_pMenu->SetVisibility(false);
-	m_pUI->SetVisibility(false);
-	m_pUI2->SetVisibility(false);
-	m_pUI3->SetVisibility(false);
-	SetIsInMenu(true);
-	if (!HasWon) {
-		m_pWinLoseScreen->AddComponent(new SpriteComponent(L"Textures/Magicka/Game_Lost.png"));
-	}
+	SceneManager::Get()->HasWon = hasWon;
+	ResetGame();
+	SceneManager::Get()->SetActiveGameScene(L"MenuEnd");
 }
 
 void ExamTestClass::ResetGame() {
-	m_pWinLoseScreen->SetVisibility(false);
-	m_pMenu->SetVisibility(true);
-	m_pUI->SetVisibility(false);
-	m_pUI2->SetVisibility(false);
-	m_pUI3->SetVisibility(false);
-	SetIsInMenu(true);
-	SetPaused(true);
 
-	m_pCamera->SetReachedEnd(true);
+	for (auto projectile : m_pProjectileHolder->GetChildren<Projectile>()) {
+			m_pProjectileHolder->RemoveChild(projectile, true);
+		
+	}
+
+	RemoveChild(m_pCharacter, true);
+
+	for (auto enemy : m_pEnemyHolder->GetChildren<ExamRangedCharacter>()) {
+			m_pEnemyHolder->RemoveChild(enemy, true);
+		
+	}
+	for (auto enemy : m_pEnemyHolder->GetChildren<EnemyMeleeCharacter>()) {
+			m_pEnemyHolder->RemoveChild(enemy, true);
+		
+	}
+
+	RemoveChild(m_pBeamMagicEmitterContainer, true);
+	RemoveChild(m_pSprayDamageColliderContainer, true);
+	RemoveChild(m_pAOEMagicEmitter, true);
+	m_pBeamMagicEmitter = nullptr;
+	m_pSprayDamageCollider = nullptr;
+
+	CreateCharacter();
+
+	DefineCameraSpline();
+
+	m_pEnemyHolder = AddChild(new GameObject());
+	m_pProjectileHolder = AddChild(new GameObject());
+	float width{ 50 };
+	int nrOfMelee{ 5 };
+	int nrOfRanged{ 0 };
+	auto position{ m_pCamera->GetLineOfIndex(0).points[1] };
+	CreateMeleeEnemies(width, position, nrOfMelee);
+	width = 50;
+	position = m_pCamera->GetLineOfIndex(2).points[1];
+	position.z -= 300;
+	nrOfRanged = 2;
+	CreateMeleeEnemies(width, position, nrOfMelee);
+	position.z += 50;
+	CreateRangedEnemies(width, position, nrOfRanged);
+	width = 50;
+	position = m_pCamera->GetLineOfIndex(2).points[1];
+	position.x += 300;
+	position.z += 300;
+	nrOfRanged = 5;
+	CreateMeleeEnemies(width, position, nrOfMelee);
+	position.x -= 100;
+	position.z -= 50;
+	CreateRangedEnemies(width, position, nrOfRanged);
+
+	CreateInput();
+
+	CreateEmitters();
+
+	SetStartPos();
+
+	ResetCombo();
 }
 #pragma endregion

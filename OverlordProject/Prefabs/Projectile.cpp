@@ -61,6 +61,7 @@ void Projectile::Initialize(const SceneContext&)
 
 void Projectile::Update(const SceneContext& sceneContext)
 {
+
 	float deltaTime = sceneContext.pGameTime->GetElapsed();
 	
 	if (m_CanMove) {
