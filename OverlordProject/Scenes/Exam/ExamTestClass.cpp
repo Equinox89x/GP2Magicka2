@@ -44,21 +44,19 @@ void ExamTestClass::Initialize()
 	int nrOfRanged{ 0 };
 	auto position{ m_pCamera->GetLineOfIndex(0).points[1] };
 	CreateMeleeEnemies(width, position, nrOfMelee);
-	width = 50;
 	position = m_pCamera->GetLineOfIndex(2).points[1];
-	position.z -= 300;
+	//position.z -= 300;
+	CreateMeleeEnemies(width, position, nrOfMelee);
 	nrOfRanged = 2;
-	CreateMeleeEnemies(width, position, nrOfMelee);
-	position.z += 50;
+	//position.z += 50;
 	CreateRangedEnemies(width, position, nrOfRanged);
-	width = 50;
-	position = m_pCamera->GetLineOfIndex(2).points[1];
-	position.x += 300;
-	position.z += 300;
-	nrOfRanged = 5;
+	position = m_pCamera->GetLineOfIndex(3).points[1];
+	//position.x += 300;
+	//position.z += 300;
 	CreateMeleeEnemies(width, position, nrOfMelee);
-	position.x -= 100;
-	position.z -= 50;
+	nrOfRanged = 5;
+	//position.x -= 100;
+	//position.z -= 50;
 	CreateRangedEnemies(width, position, nrOfRanged);
 
 	CreateInput();
@@ -188,27 +186,11 @@ void ExamTestClass::CreateDamager() {
 	m_pPlayerDamageTakingCollider = new GameObject();
 	AddChild(m_pPlayerDamageTakingCollider);
 	m_pPlayerDamageTakingCollider->AddComponent(new RigidBodyComponent());
-	m_pPlayerDamageTakingCollider->GetComponent<RigidBodyComponent>()->AddCollider(PxBoxGeometry{ 30,30,30 }, *m_pDefaultMaterial);
+	m_pPlayerDamageTakingCollider->GetComponent<RigidBodyComponent>()->AddCollider(PxBoxGeometry{ 20,20,20 }, *m_pDefaultMaterial);
 	m_pPlayerDamageTakingCollider->GetComponent<RigidBodyComponent>()->SetKinematic(true);
 
 	auto colliderInfo = m_pPlayerDamageTakingCollider->GetComponent<RigidBodyComponent>()->GetCollider(0);
 	colliderInfo.SetTrigger(true);
-
-	m_pPlayerDamageTakingCollider->SetOnTriggerCallBack([&](GameObject* /*pTriggerObject*/, GameObject* pOtherObject, PxTriggerAction action)
-	{
-		if (action == PxTriggerAction::ENTER)
-		{
-			if (auto hittingEnemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
-				m_pCharacter->DamagePlayer(true, hittingEnemy->GetAttackDamage());
-			}
-		}
-		if (action == PxTriggerAction::LEAVE)
-		{
-			if (auto hittingEnemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
-				m_pCharacter->DamagePlayer(false, hittingEnemy->GetAttackDamage());
-			}
-		}
-	});
 	
 	m_pPlayerMaxEnemyRangeCollider = new GameObject();
 	AddChild(m_pPlayerMaxEnemyRangeCollider);
@@ -236,6 +218,31 @@ void ExamTestClass::CreateDamager() {
 			}
 		}
 	});
+
+	m_pCanEnemyMoveCollider = new GameObject();
+	AddChild(m_pCanEnemyMoveCollider);
+	m_pCanEnemyMoveCollider->AddComponent(new RigidBodyComponent());
+	m_pCanEnemyMoveCollider->GetComponent<RigidBodyComponent>()->AddCollider(PxBoxGeometry{ 400,30,400 }, *m_pDefaultMaterial);
+	m_pCanEnemyMoveCollider->GetComponent<RigidBodyComponent>()->SetKinematic(true);
+
+	colliderInfo = m_pCanEnemyMoveCollider->GetComponent<RigidBodyComponent>()->GetCollider(0);
+	colliderInfo.SetTrigger(true);
+
+	m_pCanEnemyMoveCollider->SetOnTriggerCallBack([&](GameObject* /*pTriggerObject*/, GameObject* pOtherObject, PxTriggerAction action)
+	{
+		if (action == PxTriggerAction::ENTER)
+		{
+			if (auto enemy{ dynamic_cast<ExamEnemy*>(pOtherObject) }) {
+				enemy->SetCanMoveGenerally(true);
+			}
+		}
+		if (action == PxTriggerAction::LEAVE)
+		{
+			if (auto enemy{ dynamic_cast<ExamEnemy*>(pOtherObject) }) {
+				enemy->SetCanMoveGenerally(false);
+			}
+		}
+	});
 }
 
 void ExamTestClass::CreateMeleeEnemies(float width, XMFLOAT3 position, int nrOfEnemies) {
@@ -247,8 +254,8 @@ void ExamTestClass::CreateMeleeEnemies(float width, XMFLOAT3 position, int nrOfE
 		position.x += width;
 		EnemyMeleeCharacter* enemy = new EnemyMeleeCharacter(enemyDesc, position);
 		m_pEnemyHolder->AddChild(enemy);
-		enemy->AddComponent(new ModelComponent(L"Meshes/wizard.ovm", true));
-		enemy->GetComponent<ModelComponent>()->SetMaterial(m_pMaterial);
+		enemy->AddComponent(new ModelComponent(L"Meshes/goblin.ovm", true));
+		enemy->GetComponent<ModelComponent>()->SetMaterial(m_pProjectileMaterial);
 
 		enemy->AddComponent(new RigidBodyComponent());
 		enemy->GetComponent<RigidBodyComponent>()->SetKinematic(true);
@@ -258,25 +265,9 @@ void ExamTestClass::CreateMeleeEnemies(float width, XMFLOAT3 position, int nrOfE
 		auto colliderInfo = enemy->GetComponent<RigidBodyComponent>()->GetCollider(0);
 		colliderInfo.SetTrigger(true);
 
-		enemy->SetOnTriggerCallBack([&](GameObject* /*pTriggerObject*/, GameObject* pOtherObject, PxTriggerAction action)
-			{
-				if (action == PxTriggerAction::ENTER)
-				{
-					if (auto enemy{ dynamic_cast<ExamEnemy*>(pOtherObject) }) {
-						enemy->SetCanMove(false);
-					}
-				}
-		if (action == PxTriggerAction::LEAVE)
-		{
-			if (auto enemy{ dynamic_cast<ExamEnemy*>(pOtherObject) }) {
-				enemy->SetCanMove(true);
-			}
-		}
-			});
-
 		enemy->m_pCharacter = m_pCharacter;
-		enemy->GetTransform()->Scale(0.5f);
-		width -= 30;
+		enemy->GetTransform()->Scale(4.f);
+		width -= 20;
 	}
 }
 
@@ -300,31 +291,9 @@ void ExamTestClass::CreateRangedEnemies(float width, XMFLOAT3 position, int nrOf
 		auto colliderInfo = enemy->GetComponent<RigidBodyComponent>()->GetCollider(0);
 		colliderInfo.SetTrigger(true);
 
-		enemy->SetOnTriggerCallBack([&](GameObject* /*pTriggerObject*/, GameObject* pOtherObject, PxTriggerAction action)
-		{
-			if (action == PxTriggerAction::ENTER)
-			{
-				if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
-					enemy->SetCanMove(false);
-				}	
-				if (auto enemy2{ dynamic_cast<ExamRangedCharacter*>(pOtherObject) }) {
-					enemy2->SetCanMove(false);
-				}				
-			}
-			if (action == PxTriggerAction::LEAVE)
-			{
-				if (auto enemy{ dynamic_cast<EnemyMeleeCharacter*>(pOtherObject) }) {
-					enemy->SetCanMove(true);
-				}
-				if (auto enemy2{ dynamic_cast<ExamRangedCharacter*>(pOtherObject) }) {
-					enemy2->SetCanMove(true);
-				}
-			}
-		});
-
 		enemy->m_pCharacter = m_pCharacter;
 		enemy->GetTransform()->Scale(0.5f);
-		width -= 30;
+		width -= 40;
 	}
 }
 
@@ -639,6 +608,8 @@ void ExamTestClass::OnGUI()
 
 void ExamTestClass::Update()
 {
+	if (IsGameOver) return;
+
 	XMFLOAT3 pos2{ m_pCharacter->GetTransform()->GetWorldPosition()};
 
 	HandleEmitterMovement(pos2);
@@ -663,8 +634,6 @@ void ExamTestClass::Update()
 
 	const auto pCameraTransform = m_SceneContext.pCamera->GetTransform();
 	m_SceneContext.pLights->SetDirectionalLight(pCameraTransform->GetPosition(), pCameraTransform->GetForward());
-
-	//SoundSystem->update();
 
 	SoundManager::Get()->GetSystem()->update();
 
@@ -707,10 +676,10 @@ void ExamTestClass::HandleEmitterMovement(XMFLOAT3 pos) {
 	m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->UpdatePosition(pos, m_pAOEMagicEmitter->GetTransform()->GetRotation());
 	m_pBeamMagicEmitter->GetTransform()->Rotate(XMFLOAT3{ 0,0,0 });
 	m_pSprayDamageCollider->GetComponent<RigidBodyComponent>()->UpdatePosition(XMFLOAT3{1,1,220}, m_pSprayDamageCollider->GetTransform()->GetRotation());
-	//m_pSprayDamageColliderContainer->GetTransform()->Translate(pos);
 
 	m_pPlayerDamageTakingCollider->GetComponent<RigidBodyComponent>()->UpdatePosition(pos, m_pCharacter->GetTransform()->GetRotation());
 	m_pPlayerMaxEnemyRangeCollider->GetComponent<RigidBodyComponent>()->UpdatePosition(pos, m_pCharacter->GetTransform()->GetRotation());
+	m_pCanEnemyMoveCollider->GetComponent<RigidBodyComponent>()->UpdatePosition(pos, m_pCharacter->GetTransform()->GetRotation());
 }
 
 void ExamTestClass::HandleUIMovement(const XMFLOAT3 pos) {
@@ -772,6 +741,17 @@ void ExamTestClass::HandleCameraMovement()
 
 void ExamTestClass::HandleEnemies()
 {
+	for (auto enemy : m_pPlayerDamageTakingCollider->GetEnemiesInRange()) {
+		if (!enemy->GetMarkedForDestroy()) {
+			if (auto hittingEnemy{ dynamic_cast<EnemyMeleeCharacter*>(enemy) }) {
+				if (hittingEnemy->GetCanAttack()) {
+					hittingEnemy->SetCanAttack(false);
+					m_pCharacter->DamagePlayer(true, hittingEnemy->GetAttackDamage());
+				}
+			}
+		}
+	}
+
 	for (auto projectile : m_pProjectileHolder->GetChildren<Projectile>()) {
 		if (projectile->IsMarkedForDelete()) {
 			m_pProjectileHolder->RemoveChild(projectile, true);
@@ -1265,6 +1245,7 @@ void ExamTestClass::HandlePrint2(Spells spell) const {
 
 #pragma region Menu and start/end
 void ExamTestClass::SetGameOver(bool hasWon) {
+	IsGameOver = true;
 	SceneManager::Get()->HasWon = hasWon;
 	ResetGame();
 	SceneManager::Get()->SetActiveGameScene(L"EndGameMenu");
@@ -1329,5 +1310,7 @@ void ExamTestClass::ResetGame() {
 	SetStartPos();
 
 	ResetCombo();
+
+	IsGameOver = false;
 }
 #pragma endregion

@@ -35,6 +35,8 @@ public:
 
 	ExamCharacter* m_pCharacter{ nullptr };
 
+	void SetCanMoveGenerally(bool canMove) { CanMoveGeneral = canMove; };
+
 protected:
 	void Initialize(const SceneContext&) override;
 	void Update(const SceneContext&) override;
@@ -53,7 +55,7 @@ private:
 	float DamageTimer, DefaultDamageTimer{ 0.5f }/*, ShootTimer, DefaultShootTimer{ 3.f }*/;
 	bool CanDamage{ false }, CanMove{ true }, CanDamageAoE{ false }/*, CanShoot{ false }*/;
 	float DamageToTake, m_AttackDamage{ 100 };
-	bool m_MarkedForDestroy{ false };
+	bool m_MarkedForDestroy{ false }, CanMoveGeneral{ false };
 
 	XMFLOAT3 PostitionOffset;
 

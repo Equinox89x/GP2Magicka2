@@ -14,10 +14,20 @@ public:
 	EnemyMeleeCharacter& operator=(const EnemyMeleeCharacter& other) = delete;
 	EnemyMeleeCharacter& operator=(EnemyMeleeCharacter&& other) noexcept = delete;
 
+	bool GetCanAttack() { return CanAttack; };
+	void SetCanAttack(bool canAttack) { CanAttack = canAttack; };
+
 protected:
 	void InitializeChild(const SceneContext&) override;
-	void UpdateChild(const SceneContext&) override;
+	void UpdateChild(const SceneContext& sceneContext) override;
 
 private:
+	float DamageTimerMelee{ 1 };
+	bool CanAttack{ true };
+
+	FMOD::Sound* PunchSound;
+	FMOD::System* SoundSystem;
+	FMOD::Channel* CurrentChannel;
+
 };
 

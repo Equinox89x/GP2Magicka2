@@ -256,6 +256,7 @@ private:
 	GameObject* m_pUI3{ nullptr };
 	GameObject* m_pPlayerDamageTakingCollider{ nullptr };
 	GameObject* m_pPlayerMaxEnemyRangeCollider{ nullptr };
+	GameObject* m_pCanEnemyMoveCollider{ nullptr };
 	GameObject* m_pSprayDamageCollider{ nullptr };
 	GameObject* m_pSprayDamageColliderContainer{ nullptr };
 	GameObject* m_pProjectileHolder{ nullptr };

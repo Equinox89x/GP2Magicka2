@@ -48,15 +48,6 @@ void ExamCharacter::Update(const SceneContext& sceneContext)
 
 	HandleMove(sceneContext, newRot, epsilon);
 
-	if (CanTakeDamage) {
-		DamageTimer -= deltaTime;
-		if (DamageTimer <= 0) {
-			m_Health -= DamageToTake;
-			std::cout << "Damage Taken: " << DamageToTake << ", Remaining Health: " << m_Health << "\n";
-			DamageTimer = 1;
-		}
-	}
-
 	if (!CanWalk) return;
 	Animator->SetAnimation(0);
 	Animator->Play();
@@ -250,23 +241,11 @@ void ExamCharacter::DrawImGui()
 		ImGui::Dummy({ 0.f,5.f });
 		ImGui::DragFloat("Jump Speed", &m_CharacterDescExtended.JumpSpeed, 0.1f, 0.f, 0.f, "%.1f");
 		ImGui::DragFloat("Rotation Speed (deg/s)", &m_CharacterDescExtended.rotationSpeed, 0.1f, 0.f, 0.f, "%.1f");
-
-		/*bool isActive = m_pCameraComponent->IsActive();
-		if (ImGui::Checkbox("ExamCharacter Camera", &isActive))
-		{
-			m_pCameraComponent->SetActive(isActive);
-		}*/
 	}
 }
 
-void ExamCharacter::DamagePlayer(bool canTakeDamage, float damage)
+void ExamCharacter::DamagePlayer(bool /*canTakeDamage*/, float damage)
 {
-	CanTakeDamage = canTakeDamage;
-	if (CanTakeDamage) {
-		DamageToTake += damage;
-	}
-	else {
-		DamageToTake -= damage;
-		if (DamageToTake <= 0) DamageToTake = 0;
-	}
+	m_Health -= damage;
+	std::cout << "Damage Taken: " << damage << ", Remaining Health: " << m_Health << "\n";
 }

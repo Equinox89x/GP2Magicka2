@@ -41,7 +41,7 @@ void ExamEnemy::Update(const SceneContext& sceneContext)
 	XMFLOAT3 newRot = MathHelper::GetRotationTowardsPoint(originalLocation, lookPosition, originalRotation, false);
 	GetComponent<ModelComponent>()->GetTransform()->Rotate(newRot, false);
 
-	if (CanMove) {
+	if (CanMove && CanMoveGeneral) {
 		//get forward vector
 		if (!MathHelper::IsPointInCircle3D(originalLocation, lookPosition, 25)) {
 			XMFLOAT3 forward{ GetTransform()->GetForward() };

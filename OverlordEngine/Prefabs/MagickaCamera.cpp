@@ -24,7 +24,7 @@ void MagickaCamera::Update(const SceneContext& /*sceneContext*/)
 	ProjectedPoint = XMFLOAT3{ pos1.x + (projection * lineDir.x), pos1.y + (projection * lineDir.y), pos1.z + (projection * lineDir.z) };
 	ProjectedLinePoint = XMFLOAT3{ ProjectedPoint.x, pos1.y, ProjectedPoint.z };
 	
-	if (MathHelper::IsPointInCircle3D(ProjectedLinePoint, pos1, 0.5f)) {
+	if (MathHelper::IsPointInCircle3D(ProjectedLinePoint, pos1, 0.8f)) {
 		if (XMVector3Equal(XMLoadFloat3(&pos1), XMLoadFloat3(&posStart))) {
 			IsInStart = true;
 		}
@@ -36,7 +36,7 @@ void MagickaCamera::Update(const SceneContext& /*sceneContext*/)
 			}
 		}
 	}
-	else if (MathHelper::IsPointInCircle3D(ProjectedLinePoint, pos2, 0.5f)) {
+	else if (MathHelper::IsPointInCircle3D(ProjectedLinePoint, pos2, 0.8f)) {
 		if (XMVector3Equal(XMLoadFloat3(&pos2), XMLoadFloat3(&posEnd))) {
 			HasReachedEnd = true;
 		}
