@@ -247,7 +247,7 @@ void ExamTestClass::CreateDamager() {
 
 void ExamTestClass::CreateMeleeEnemies(float width, XMFLOAT3 position, int nrOfEnemies) {
 	CharacterDescExtended enemyDesc{ m_Material };
-	enemyDesc.maxMoveSpeed = 55;
+	enemyDesc.maxMoveSpeed = 35;
 
 	for (size_t i = 0; i < nrOfEnemies; i++)
 	{
@@ -651,6 +651,7 @@ void ExamTestClass::HandleTimers() {
 		AoeTimer -= deltaTime;
 		if (AoeTimer <= 0) {
 			ResetCombo();
+			m_pCharacter->ResetMoveSpeed();
 		}
 	}
 
@@ -874,7 +875,7 @@ void ExamTestClass::ExecuteMagicCombo()
 
 void ExamTestClass::ExecuteAOE()
 {
-	if (!IsExecutingMagic) {
+	if (!IsExecutingMagic && m_ComboBar.size() > 0) {
 		IsExecutingMagic = true;
 
 		auto components{ m_pAOEMagicEmitter->GetComponents<ParticleEmitterComponent>() };
@@ -896,7 +897,7 @@ void ExamTestClass::ExecuteAOE()
 			}
 		}
 
-		if (MagicResult.Modifiers.size() > 0 && m_ComboBar.size() > 0) {
+		if (MagicResult.Modifiers.size() > 0) {
 			m_pAOEMagicEmitter->GetComponent<RigidBodyComponent>()->SetEnableCollision(true);
 			m_pAOEMagicEmitter->SetVisibility(true);
 			m_pSprayMagicEmitter->SetVisibility(false);

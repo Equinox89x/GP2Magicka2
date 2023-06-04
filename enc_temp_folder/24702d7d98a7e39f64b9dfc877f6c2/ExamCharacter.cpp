@@ -148,8 +148,8 @@ void ExamCharacter::CalculateForwardMovement(const float& epsilon, const SceneCo
 	float deltaTime = sceneContext.pGameTime->GetElapsed();
 
 	XMFLOAT3 forward{ GetTransform()->GetForward() };
-	forward.x *= deltaTime * m_CharacterDescExtended.maxMoveSpeed;
-	forward.z *= deltaTime * m_CharacterDescExtended.maxMoveSpeed;
+	forward.x *= deltaTime * 70;
+	forward.z *= deltaTime * 70;
 	m_CurrentDirection = forward;
 
 	//calculate point to move to (based on forward vector coming from mouse rotation)
@@ -214,7 +214,7 @@ void ExamCharacter::HandleInput(const SceneContext& sceneContext, bool& shiftPre
 			Animator->SetAnimation(2);
 			Animator->Play();
 			CanWalk = false;
-			m_CharacterDescExtended.maxMoveSpeed = 25;
+			m_CharacterDescExtended.maxMoveSpeed = 30;
 		}
 		if (sceneContext.pInput->IsMouseButton(InputState::released, 2)) {
 			scene->FireProjectile();
@@ -227,7 +227,7 @@ void ExamCharacter::HandleInput(const SceneContext& sceneContext, bool& shiftPre
 
 		if (abs(look.x) > 0.01f || abs(look.y) > 0.01f) {
 			scene->ExecuteMagicCombo();
-			m_CharacterDescExtended.maxMoveSpeed = 25;
+			m_CharacterDescExtended.maxMoveSpeed = 30;
 			WasPressed = true;
 		}
 		else {

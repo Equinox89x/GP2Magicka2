@@ -66,6 +66,7 @@ public:
 
 	void DamagePlayer(bool canTakeDamage, float damage);
 	float GetHealth() { return m_Health; };
+	void ResetMoveSpeed(){ m_CharacterDescExtended.maxMoveSpeed = 70; }
 
 protected:
 	void Initialize(const SceneContext&) override;
