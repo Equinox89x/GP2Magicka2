@@ -1,9 +1,10 @@
 #include "stdafx.h"
 #include "MainGame.h"
 
-#include "Scenes/Exam/ExamTestClass.h"
 #include "Scenes/Exam/Menu.h"
+#include "Scenes/Exam/EndGameMenu.h"
 #include "Scenes/Exam/GameMenu.h"
+#include "Scenes/Exam/ExamTestClass.h"
 
 //Game is preparing
 void MainGame::OnGamePreparing(GameContext& gameContext)
@@ -14,6 +15,7 @@ void MainGame::OnGamePreparing(GameContext& gameContext)
 void MainGame::Initialize()
 {
 	SceneManager::Get()->AddGameScene(new Menu());
+	SceneManager::Get()->AddGameScene(new EndGameMenu());
 	SceneManager::Get()->AddGameScene(new GameMenu());
 	SceneManager::Get()->AddGameScene(new ExamTestClass());
 }

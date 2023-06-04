@@ -93,7 +93,7 @@
     <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Scenes\Exam\EndMenu.cpp" />
+    <ClCompile Include="Scenes\Exam\EndGameMenu.cpp" />
     <ClCompile Include="Scenes\Exam\GameMenu.cpp" />
     <ClCompile Include="Prefabs\GameMenuPrefab.cpp" />
     <ClCompile Include="Scenes\Exam\Menu.cpp" />
@@ -137,7 +137,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Scenes\Exam\EndMenu.h" />
+    <ClInclude Include="Scenes\Exam\EndGameMenu.h" />
     <ClInclude Include="Scenes\Exam\GameMenu.h" />
     <ClInclude Include="Prefabs\GameMenuPrefab.h" />
     <ClInclude Include="Scenes\Exam\Menu.h" />

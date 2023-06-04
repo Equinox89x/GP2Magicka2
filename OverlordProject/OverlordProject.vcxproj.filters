@@ -25,7 +25,7 @@
     <ClCompile Include="Scenes\Exam\Menu.cpp" />
     <ClCompile Include="Prefabs\GameMenuPrefab.cpp" />
     <ClCompile Include="Scenes\Exam\GameMenu.cpp" />
-    <ClCompile Include="Scenes\Exam\EndMenu.cpp" />
+    <ClCompile Include="Scenes\Exam\EndGameMenu.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MainGame.h" />
@@ -51,6 +51,6 @@
     <ClInclude Include="Scenes\Exam\Menu.h" />
     <ClInclude Include="Prefabs\GameMenuPrefab.h" />
     <ClInclude Include="Scenes\Exam\GameMenu.h" />
-    <ClInclude Include="Scenes\Exam\EndMenu.h" />
+    <ClInclude Include="Scenes\Exam\EndGameMenu.h" />
   </ItemGroup>
 </Project>

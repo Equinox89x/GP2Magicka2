@@ -1,7 +1,7 @@
 #include "stdafx.h"
-#include "EndMenu.h"
+#include "EndGameMenu.h"
 
-void EndMenu::Initialize()
+void EndGameMenu::Initialize()
 {
 	MenuDesc menuDesc{ };
 	menuDesc.actionId_MenuDown = MenuDown;
@@ -24,23 +24,7 @@ void EndMenu::Initialize()
 	m_SceneContext.pInput->AddInputAction(inputAction);
 }
 
-void EndMenu::SetActiveMenu(MenuTypes menuType)
+void EndGameMenu::SetActiveMenu(MenuTypes menuType)
 {
 	m_pMenu->SetActiveMenu(menuType);
-}
-
-void EndMenu::OnGUI()
-{
-}
-
-void EndMenu::Update()
-{
-}
-
-void EndMenu::Draw()
-{
-}
-
-void EndMenu::PostDraw()
-{
 }

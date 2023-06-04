@@ -28,19 +28,3 @@ void Menu::SetActiveMenu(MenuTypes menuType)
 {
 	m_pMenu->SetActiveMenu(menuType);
 }
-
-void Menu::OnGUI()
-{
-}
-
-void Menu::Update()
-{
-}
-
-void Menu::Draw()
-{
-}
-
-void Menu::PostDraw()
-{
-}

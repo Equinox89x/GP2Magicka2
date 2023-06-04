@@ -14,10 +14,6 @@ public:
 
 protected:
 	void Initialize() override;
-	void OnGUI() override;
-	void Update() override;
-	void Draw() override;
-	void PostDraw() override;
 
 private:
 	enum MenuInputIds

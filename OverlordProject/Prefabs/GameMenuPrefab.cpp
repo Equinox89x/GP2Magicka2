@@ -60,6 +60,15 @@ void GameMenuPrefab::Update(const SceneContext& sceneContext)
 		}
 	}
 
+	if (MenuType == MenuTypes::EndMenu) {
+		if (SceneManager::Get()->HasWon) {
+			GetComponent<SpriteComponent>()->SetTexture(L"Textures/Magicka/Game_Won.png");
+		}
+		else {
+			GetComponent<SpriteComponent>()->SetTexture(L"Textures/Magicka/Game_Lost.png");
+		}
+	}
+
 	//Menu* scene{ reinterpret_cast<Menu*>(SceneManager::Get()->GetActiveScene()) };
 	if (sceneContext.pInput->IsActionTriggered(m_MenuDesc.actionId_Select)) {
 		if (CanButton) {

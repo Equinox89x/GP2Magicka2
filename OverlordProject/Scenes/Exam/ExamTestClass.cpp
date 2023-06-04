@@ -669,8 +669,8 @@ void ExamTestClass::Update()
 	SoundManager::Get()->GetSystem()->update();
 
 	if (SceneManager::Get()->RestartTriggered) {
-		SceneManager::Get()->RestartTriggered = false;
 		ResetGame();
+		SceneManager::Get()->RestartTriggered = false;
 	}
 }
 
@@ -1267,7 +1267,7 @@ void ExamTestClass::HandlePrint2(Spells spell) const {
 void ExamTestClass::SetGameOver(bool hasWon) {
 	SceneManager::Get()->HasWon = hasWon;
 	ResetGame();
-	SceneManager::Get()->SetActiveGameScene(L"MenuEnd");
+	SceneManager::Get()->SetActiveGameScene(L"EndGameMenu");
 }
 
 void ExamTestClass::ResetGame() {

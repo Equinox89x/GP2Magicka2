@@ -28,19 +28,3 @@ void GameMenu::SetActiveMenu(MenuTypes menuType)
 {
 	m_pMenu->SetActiveMenu(menuType);
 }
-
-void GameMenu::OnGUI()
-{
-}
-
-void GameMenu::Update()
-{
-}
-
-void GameMenu::Draw()
-{
-}
-
-void GameMenu::PostDraw()
-{
-}
